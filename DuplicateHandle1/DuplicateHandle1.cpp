@@ -15,8 +15,11 @@ TCHAR PROC_NAME3[] = L"03.DuplicateHandle3.exe";
 * "03.DuplicateHandle2.exe" is the target process
 */
 
+void ClearProcesses(LPCWSTR pszProcName);
+void CreateProcesses(LPCWSTR pszName, HANDLE* ph, DWORD* ppid);
 void GetProcessHandleInformation(HANDLE h, std::unique_ptr<BYTE[]>& buffer);
 void FindProcessHandle(BYTE* buffer, LPCWSTR pszHandleName, HANDLE hP, DWORD pid, HANDLE* pOut);
+
 
 void TestDupTwoProcesses() {
 	HANDLE hP;
@@ -25,15 +28,9 @@ void TestDupTwoProcesses() {
 	BOOL ret;
 	HANDLE hMutex;
 
-	STARTUPINFO sinfo = { 0 };
-	sinfo.cb = sizeof(sinfo);
-	PROCESS_INFORMATION pinfo = { 0 };
+	ClearProcesses(PROC_NAME3);
+	CreateProcesses(PROC_NAME3, &hP, &hPID);
 
-	ret = CreateProcess(nullptr, (LPWSTR)PROC_NAME3, nullptr, nullptr, FALSE, CREATE_NEW_CONSOLE, 0, 0, &sinfo, &pinfo);
-	if (!ret)
-		exit(0);
-	hPID = pinfo.dwProcessId;
-	hP = pinfo.hProcess;
 	Sleep(1000);
 	
 	hMutex = CreateMutex(NULL, 0, L"TonyMutex");
@@ -68,25 +65,11 @@ void TestDupThreeProcesses() {
 	HANDLE hMutex = 0;
 	BOOL ret;
 
-	STARTUPINFO sinfo = { 0 };
-	sinfo.cb = sizeof(sinfo);
-	PROCESS_INFORMATION pinfo = { 0 };
+	ClearProcesses(PROC_NAME2);
+	ClearProcesses(PROC_NAME3);
+	CreateProcesses(PROC_NAME2, &h2P, &h2PID);
+	CreateProcesses(PROC_NAME3, &h3P, &h3PID);
 
-	ret = CreateProcess(nullptr, (LPWSTR)PROC_NAME2, nullptr, nullptr, FALSE, CREATE_NEW_CONSOLE, 0, 0, &sinfo, &pinfo);
-	if (!ret)
-		exit(0);
-	h2PID = pinfo.dwProcessId;
-	h2P = pinfo.hProcess;
-
-	ret = CreateProcess(nullptr, (LPWSTR)PROC_NAME3, nullptr, nullptr, FALSE, CREATE_NEW_CONSOLE, 0, 0, &sinfo, &pinfo);
-	if (!ret)
-		exit(0);
-	h3PID = pinfo.dwProcessId;
-	h3P = pinfo.hProcess;
-
-	//h2P = OpenProcess(PROCESS_ALL_ACCESS, 0, h2PID);
-	//h3P = OpenProcess(PROCESS_ALL_ACCESS, 0, h3PID);
-	printf("Warm up. Wait both processes to start up...\n");
 	Sleep(1000);
 
 	std::unique_ptr<BYTE[]> buffer;
@@ -101,7 +84,7 @@ void TestDupThreeProcesses() {
 	}
 	else {
 		printf("Use 3rd process to dup \"TonyMutex\" handle from A to B successfully. Please watch in Process Explorer.\n");
-		printf("Press Enter ton continue\n");
+		printf("Press Enter to continue\n");
 		getchar();
 	}
 
@@ -110,6 +93,32 @@ end:
 	TerminateProcess(h3P, 0);
 	CloseHandle(h2P);
 	CloseHandle(h3P);
+}
+
+void ClearProcesses(LPCWSTR pszProcName) {
+	DWORD pid;
+	HANDLE h;
+
+	pid = GetProcessIDByName(pszProcName);
+	if (pid) {
+		h = OpenProcess(PROCESS_ALL_ACCESS, 0, pid);
+		TerminateProcess(h, 0);
+	}
+}
+
+void CreateProcesses(LPCWSTR pszName, HANDLE* ph, DWORD* ppid) {
+	BOOL ret;
+
+	STARTUPINFO sinfo = { 0 };
+	sinfo.cb = sizeof(sinfo);
+	PROCESS_INFORMATION pinfo = { 0 };
+
+	ret = CreateProcess(nullptr, (LPWSTR)pszName, nullptr, nullptr, FALSE, CREATE_NEW_CONSOLE, 0, 0, &sinfo, &pinfo);
+	if (!ret)
+		exit(0);
+
+	*ppid = pinfo.dwProcessId;
+	*ph = pinfo.hProcess;
 }
 
 void GetProcessHandleInformation(HANDLE h, std::unique_ptr<BYTE[]>& buffer) {
@@ -152,17 +161,31 @@ void FindProcessHandle(BYTE* buffer, LPCWSTR pszHandleName, HANDLE hP, DWORD pid
 
 		auto len = ::wcslen(targetName);
 		auto name = reinterpret_cast<UNICODE_STRING*>(nameBuffer);
-		if (name->Buffer && ::_wcsnicmp(name->Buffer, targetName, len) == 0) {
-			// found it!
-			*pOut = hv;
-			break;
+		if (name->Buffer) {
+			wprintf(L"Handle Index: 0x%llX,\tHandle Name: %ws\n", hv, name->Buffer);
+			if (::_wcsnicmp(name->Buffer, targetName, len) == 0) {
+				// found it!
+				*pOut = hv;
+				break;
+			}
 		}
 	}
+	printf("\n");
+}
+
+BOOL CALLBACK OnClose(DWORD dwCtrlType) {
+	if (dwCtrlType == CTRL_CLOSE_EVENT) {
+		ClearProcesses(PROC_NAME2);
+		ClearProcesses(PROC_NAME3);
+	}
+
+	return TRUE;
 }
 
 int main() {
 
-	TestDupTwoProcesses();
+	SetConsoleCtrlHandler(OnClose, TRUE);
+	//TestDupTwoProcesses();
 	TestDupThreeProcesses();
 
 	return 0;

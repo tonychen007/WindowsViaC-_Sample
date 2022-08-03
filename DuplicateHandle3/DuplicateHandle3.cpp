@@ -1,7 +1,5 @@
-﻿#include <Windows.h>
+﻿#include <stdio.h>
 
 int main() {
-    while (1) {
-        Sleep(1000);
-    }
+	getchar();
 }
