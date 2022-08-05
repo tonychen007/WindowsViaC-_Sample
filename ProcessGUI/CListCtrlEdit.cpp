@@ -106,7 +106,7 @@ void CListCtrlEdit::OnNMClick(NMHDR* pNMHDR, LRESULT* pResult) {
 	m_edit.ShowWindow(SW_SHOW);
 	m_edit.SetSel(0, str.GetLength(), 0);
 	m_edit.SetFocus();
-}	
+}
 
 void CListCtrlEdit::OnEnEdtKillFocus() {
 	ClearEditBox();
@@ -119,7 +119,7 @@ void CListCtrlEdit::ClearEditBox() {
 
 void CListCtrlEdit::OnLvnColumnclick(NMHDR* pNMHDR, LRESULT* pResult) {
 	LPNMLISTVIEW pNMLV = reinterpret_cast<LPNMLISTVIEW>(pNMHDR);
-	
+
 	ClearEditBox();
 	*pResult = 0;
 }
