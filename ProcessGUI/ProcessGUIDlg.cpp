@@ -7,6 +7,8 @@
 #include "ProcessGUIDlg.h"
 #include "afxdialogex.h"
 
+#include <windowsx.h>
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -45,8 +47,8 @@ BOOL CProcessGUIDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// 設定大圖示
 	SetIcon(m_hIcon, FALSE);		// 設定小圖示
 
-	// TODO: 在此加入額外的初始設定
-	InitListControl();
+	InitEnvListControl();
+	InitProcessDropListControl();
 
 	return TRUE;  // 傳回 TRUE，除非您對控制項設定焦點
 }
@@ -98,7 +100,7 @@ void CProcessGUIDlg::OnLButtonDown(UINT nFlags, CPoint point) {
 	CDialog::OnLButtonDown(nFlags, point);
 }
 
-void CProcessGUIDlg::InitListControl() {
+void CProcessGUIDlg::InitEnvListControl() {
 	RECT rect;
 	LONG lStyle;
 	DWORD dwStyle;
@@ -130,6 +132,30 @@ void CProcessGUIDlg::InitListControl() {
 
 	m_listCtrl.InsertColumn(0, &lvcol1);
 	m_listCtrl.InsertColumn(1, &lvcol2);
+}
+
+void CProcessGUIDlg::InitProcessDropListControl() {
+	CRect comboRect;
+	int itemHeight;
+	TEXTMETRIC tm;
+	CDC* pDC = GetDC();
+	GetTextMetrics(*pDC, &tm);
+	CONST int dropCount = 10;
+
+	m_processDropList = (CComboBox*)GetDlgItem(IDC_PROCESS_DROPLIST);
+	itemHeight = tm.tmHeight * 2;
+	m_processDropList->SetItemHeight(-1, itemHeight);
+	m_processDropList->AddString(L"one");
+	m_processDropList->AddString(L"two");
+	m_processDropList->AddString(L"three");
+	m_processDropList->AddString(L"four");
+	m_processDropList->AddString(L"five");
+
+	m_processDropList->GetClientRect(&comboRect);
+	m_processDropList->SetWindowPos(NULL, 0, 0, comboRect.right, dropCount * itemHeight, SWP_NOMOVE | SWP_NOZORDER);
+	m_processDropList->SetCurSel(0);
+	m_processDropList->SetRedraw();
+	m_processDropList->InvalidateRect(NULL, TRUE);
 }
 
 void CProcessGUIDlg::OnGetdispinfoEnvList(NMHDR* pNMHDR, LRESULT* pResult) {

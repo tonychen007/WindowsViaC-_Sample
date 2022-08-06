@@ -1,4 +1,5 @@
 ﻿#include <Windows.h>
+#include <CommCtrl.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -23,6 +24,7 @@ void DumpEnviron();
 void ExtractArgs(char** argv);
 void TestEnvVarAndCurrentDir();
 
+void TestCreateProcess();
 
 #define DUMP_MODULE(a) DumpModule(L#a, a)
 
@@ -49,7 +51,8 @@ int main(int argc, char** argv, char** env) {
     printf("***Test Expand Env String and Current Working Direcotry***\n");
     TestEnvVarAndCurrentDir();
 
-    int a = 0;
+    printf("\n\n");
+    TestCreateProcess();
 }
 
 void ExtractEnviron(char** env, StringDict& envDict) {
@@ -212,4 +215,63 @@ void TestEnvVarAndCurrentDir() {
  end:
     CloseHandle(hf);
     DeleteFile(L"C:test.txt");
+}
+
+void TestCreateProcess() {
+
+    STARTUPINFO si = { sizeof(si) };
+    STARTUPINFOEX siex;
+
+    PROCESS_INFORMATION pi;
+    TCHAR buf[MAX_PATH];
+
+    /*
+    StringCchCopy(buf, MAX_PATH, L"NOTEPAD");
+
+    printf("Test CreateProcess with pszCommandLine\n");
+    CreateProcess(NULL, buf, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi);
+    Sleep(3000);
+    TerminateProcess(pi.hProcess, 0);
+
+    Sleep(1000);
+    printf("Test CreateProcess with pszApplicationName\n");
+    StringCchCopy(buf, MAX_PATH, L"C:\\Windows\\NOTEPAD.EXE");
+    CreateProcess(buf, NULL, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi);
+    Sleep(1000);
+    TerminateProcess(pi.hProcess, 0);
+
+    Sleep(1000);
+    printf("Test CreateProcess with pszApplicationName and pszCommandLine\n");
+    // note there is a white space
+    StringCchCopy(buf, MAX_PATH, L" 1.txt");
+    CreateProcess(L"C:\\Windows\\NOTEPAD.EXE", buf, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi);
+    Sleep(3000);
+    TerminateProcess(pi.hProcess, 0);
+    */
+
+    Sleep(1000);
+    printf("Test CreateProcess with lpDesktop\n");
+    LPCWSTR pszDesktop = L"MYDESK";    
+    HDESK hDesktop;
+    HWND hP;
+    hDesktop = CreateDesktop(pszDesktop, NULL, NULL, 0, GENERIC_ALL, 0);
+    if (!hDesktop)
+        return;
+
+    si.dwFlags = 0;
+    StringCchCopy(buf, MAX_PATH, L"MYDESK");
+    si.lpDesktop = buf;
+    CreateProcess(L"C:\\Windows\\NOTEPAD.EXE", NULL, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi);
+    
+    printf("Find windows of Notepad\n");
+    hP = FindWindow(L"Notepad", NULL);
+    printf("Before SetThreadDesktop: hwnd is: %x\n", hP);
+    SetThreadDesktop(hDesktop);
+    hP = FindWindow(L"Notepad", NULL);
+    printf("After SetThreadDesktop: hwnd is: %x\n", hP);
+
+    Sleep(1000);
+    TerminateProcess(pi.hProcess, 0);
+
+    int a = 0;
 }

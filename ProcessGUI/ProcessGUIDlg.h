@@ -36,7 +36,8 @@ protected:
 	afx_msg void OnGetdispinfoEnvList(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnBnClickedGetEnvVarBtn();
 
-	void InitListControl();
+	void InitEnvListControl();
+	void InitProcessDropListControl();
 	DECLARE_MESSAGE_MAP()
 
 public:
@@ -45,4 +46,6 @@ public:
 
 	CListCtrlEdit m_listCtrl;
 	StringDict m_envDict;
+
+	CComboBox* m_processDropList;
 };
