@@ -8,6 +8,9 @@
 #include <strsafe.h>
 #include <map>
 #include <string>
+#include <array>
+#include <thread>
+#include <chrono>
 using namespace std;
 
 extern "C" const IMAGE_DOS_HEADER __ImageBase;
@@ -25,6 +28,10 @@ void ExtractArgs(char** argv);
 void TestEnvVarAndCurrentDir();
 
 void TestCreateProcess();
+void TestCreateProcessWithDesktop();
+void TestCreateProcessWithProcThreadList();
+
+void TestExitThread();
 
 #define DUMP_MODULE(a) DumpModule(L#a, a)
 
@@ -52,7 +59,19 @@ int main(int argc, char** argv, char** env) {
     TestEnvVarAndCurrentDir();
 
     printf("\n\n");
-    TestCreateProcess();
+    //TestCreateProcess();
+
+    printf("\n\n");
+    printf("***Test CreateProcess With Desktop***\n");
+    //TestCreateProcessWithDesktop();
+
+    printf("\n\n");
+    printf("***Test CreateProcess With PROC_THREAD_ATTRIBUTE_LIST***\n");
+    TestCreateProcessWithProcThreadList();
+
+    printf("\n\n");
+    printf("***Test ExitThread***\n");
+    //TestExitThread();
 }
 
 void ExtractEnviron(char** env, StringDict& envDict) {
@@ -225,7 +244,6 @@ void TestCreateProcess() {
     PROCESS_INFORMATION pi;
     TCHAR buf[MAX_PATH];
 
-    /*
     StringCchCopy(buf, MAX_PATH, L"NOTEPAD");
 
     printf("Test CreateProcess with pszCommandLine\n");
@@ -247,11 +265,15 @@ void TestCreateProcess() {
     CreateProcess(L"C:\\Windows\\NOTEPAD.EXE", buf, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi);
     Sleep(3000);
     TerminateProcess(pi.hProcess, 0);
-    */
+}
 
-    Sleep(1000);
+void TestCreateProcessWithDesktop() {
+    STARTUPINFO si = { sizeof(si) };
+    PROCESS_INFORMATION pi;
+    TCHAR buf[MAX_PATH];
+
     printf("Test CreateProcess with lpDesktop\n");
-    LPCWSTR pszDesktop = L"MYDESK";    
+    LPCWSTR pszDesktop = L"MYDESK";
     HDESK hDesktop;
     HWND hP;
     hDesktop = CreateDesktop(pszDesktop, NULL, NULL, 0, GENERIC_ALL, 0);
@@ -262,7 +284,7 @@ void TestCreateProcess() {
     StringCchCopy(buf, MAX_PATH, L"MYDESK");
     si.lpDesktop = buf;
     CreateProcess(L"C:\\Windows\\NOTEPAD.EXE", NULL, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi);
-    
+
     printf("Find windows of Notepad\n");
     hP = FindWindow(L"Notepad", NULL);
     printf("Before SetThreadDesktop: hwnd is: %x\n", hP);
@@ -272,6 +294,100 @@ void TestCreateProcess() {
 
     Sleep(1000);
     TerminateProcess(pi.hProcess, 0);
+    CloseDesktop(hDesktop);
+}
 
-    int a = 0;
+void TestCreateProcessWithProcThreadList() {
+    BOOL ret;
+    size_t sz;
+    HANDLE m1, m2, m3, m4;
+    HANDLE hArr[3];
+    STARTUPINFOEXW siex;
+    STARTUPINFO si = { sizeof(si) };
+    PROCESS_INFORMATION pi;
+    TCHAR buf[MAX_PATH] = { '\0' };
+    LPPROC_THREAD_ATTRIBUTE_LIST lpthattrList;
+
+    // create three mutex
+    TCHAR pzm1[] = L"TonyMutex1";
+    TCHAR pzm2[] = L"TonyMutex2";
+    TCHAR pzm3[] = L"TonyMutex3";
+    TCHAR pzm4[] = L"TonyMutex4";
+    SECURITY_ATTRIBUTES sa1;
+    SECURITY_ATTRIBUTES sa2;
+    SECURITY_ATTRIBUTES sa3;
+    sa1.lpSecurityDescriptor = NULL;
+    sa1.bInheritHandle = TRUE;
+    sa1.nLength = sizeof(sa1);
+    sa2.lpSecurityDescriptor = NULL;
+    sa2.bInheritHandle = TRUE;
+    sa2.nLength = sizeof(sa1);
+    sa3.lpSecurityDescriptor = NULL;
+    sa3.bInheritHandle = TRUE;
+    sa3.nLength = sizeof(sa1);
+
+    m1 = CreateMutex(&sa1, FALSE, pzm1);
+    m2 = CreateMutex(&sa2, FALSE, pzm2);
+    m3 = CreateMutex(&sa3, FALSE, pzm3);
+    m4 = CreateMutex(&sa3, FALSE, pzm4);
+    hArr[0] = m1;
+    hArr[1] = m2;
+    hArr[2] = m3;
+
+    InitializeProcThreadAttributeList(NULL, 1, 0, &sz);
+    lpthattrList = reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(HeapAlloc(GetProcessHeap(), 0, sz));
+    ret = InitializeProcThreadAttributeList(lpthattrList, 1, 0, &sz);
+    ret = UpdateProcThreadAttribute(lpthattrList, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
+        hArr, _countof(hArr) * sizeof(HANDLE),  NULL, NULL);
+
+    if (!ret) {
+
+    }
+    else {
+        ZeroMemory(&siex, sizeof(siex));
+        //ZeroMemory(&si, sizeof(si));
+        //si.cb = sizeof(si);
+        //siex.StartupInfo = si;
+        siex.StartupInfo.cb = sizeof(STARTUPINFOEX);
+        siex.lpAttributeList = lpthattrList;
+        StringCchCopy(buf, MAX_PATH, L"notepad.exe");
+        ret = CreateProcess(NULL, buf, NULL, NULL, TRUE, EXTENDED_STARTUPINFO_PRESENT, NULL, NULL, &siex.StartupInfo, &pi);
+        if (ret) {
+            printf("Create Proc_Thread_Attri_List successfully. Please watch through Process Explorer.\n");
+            wprintf(L"0x%04x - [%ws]\n0x%04x - [%ws]\n0x%04x - [%ws]\nAre all inherited\n\n0x%04x - [%ws] is not inherited.\n", 
+                m1, pzm1, m2, pzm2, m3, pzm3, m4, pzm4);
+            printf("Press any key to continue.\n");
+            getchar();
+            TerminateProcess(pi.hProcess, 0);
+        }
+    }
+
+    HeapFree(GetProcessHeap(), 0, lpthattrList);
+    DeleteProcThreadAttributeList(lpthattrList);
+}
+
+void TestExitThread() {
+    //HANDLE h = CreateThread(NULL, 0, ThreadFunc1, NULL, 0, 0);
+    printf("Call ExitThread, but the process will not terminate.\n");
+
+    thread th([&]() {
+        auto st = chrono::steady_clock::now();
+
+        while (1) {
+            printf("Inside another thread.\n");
+            auto ed = chrono::steady_clock::now();
+            auto diff = chrono::duration_cast<chrono::duration<double>>(ed - st);
+            if (diff.count() >= 5) {
+                printf("Running for 5s. So exit thread.\n");
+                break;
+            }
+
+            Sleep(1000);
+
+        }
+
+        exit(0);
+    });
+
+    ExitThread(0);
 }
