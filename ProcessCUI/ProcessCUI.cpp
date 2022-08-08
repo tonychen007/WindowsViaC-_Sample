@@ -11,6 +11,9 @@
 #include <array>
 #include <thread>
 #include <chrono>
+
+#include "Tools.h"
+
 using namespace std;
 
 extern "C" const IMAGE_DOS_HEADER __ImageBase;
@@ -38,6 +41,18 @@ void TestExitThread();
 int main(int argc, char** argv, char** env) {
     StringDict envDict;
 
+    /*
+    SHELLEXECUTEINFO sei = { sizeof(SHELLEXECUTEINFO) };
+    sei.lpVerb = TEXT("runas");
+    sei.lpFile = TEXT("cmd.exe");
+    sei.nShow = SW_SHOWNORMAL;
+
+    if (!ShellExecuteEx(&sei)) {
+        DWORD dwStatus = GetLastError();
+        int a = 0;
+    }
+    */
+
     printf("***Get environ by char** env***\n");
     ExtractEnviron(env, envDict);
     DumpEnviron(envDict);
@@ -63,15 +78,21 @@ int main(int argc, char** argv, char** env) {
 
     printf("\n\n");
     printf("***Test CreateProcess With Desktop***\n");
-    TestCreateProcessWithDesktop();
+    //TestCreateProcessWithDesktop();
 
     printf("\n\n");
     printf("***Test CreateProcess With PROC_THREAD_ATTRIBUTE_LIST***\n");
-    TestCreateProcessWithProcThreadList();
+    //TestCreateProcessWithProcThreadList();
 
     printf("\n\n");
     printf("***Test ExitThread***\n");
-    TestExitThread();
+    //TestExitThread();
+
+    printf("\n\n");
+    TOKEN_ELEVATION_TYPE tokenElvaType;
+    BOOL isAdmin;
+    printf("***Test ElevationType and IsUserAdmin***\n");
+    GetProcessElevation(&tokenElvaType, &isAdmin);
 }
 
 void ExtractEnviron(char** env, StringDict& envDict) {
@@ -203,6 +224,7 @@ void TestEnvVarAndCurrentDir() {
     TCHAR buf[MAX_PATH] = { '\0' };
     LPCWSTR pszBuf = buf;
     BOOL ret;
+    DWORD dwsz;
 
     GetEnvironmentVariable(L"USERPROFILE", buf, MAX_PATH);
     wprintf(L"%s\n", buf);
@@ -222,7 +244,8 @@ void TestEnvVarAndCurrentDir() {
         goto end;
     }
 
-    ret = WriteFile(hf, L"123", 6, NULL, NULL);
+    StringCchCopy(buf, MAX_PATH, L"123");
+    ret = WriteFile(hf, buf, 6, &dwsz, NULL);
     if (!ret) {
         printf("Write to file failed.\n");
         goto end;

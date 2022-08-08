@@ -1,9 +1,10 @@
 #pragma once
 
 #include <Windows.h>
+#include <shlobj.h>
 
 DWORD GetProcessIDByName(LPCWSTR pName);
-
+BOOL GetProcessElevation(TOKEN_ELEVATION_TYPE* pElevationType, BOOL* pIsAdmin);
 
 // undocumented
 #define NT_SUCCESS(status)				 (status >= 0)
