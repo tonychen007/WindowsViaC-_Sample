@@ -63,7 +63,7 @@ int main(int argc, char** argv, char** env) {
 
     printf("\n\n");
     printf("***Test CreateProcess With Desktop***\n");
-    //TestCreateProcessWithDesktop();
+    TestCreateProcessWithDesktop();
 
     printf("\n\n");
     printf("***Test CreateProcess With PROC_THREAD_ATTRIBUTE_LIST***\n");
@@ -71,7 +71,7 @@ int main(int argc, char** argv, char** env) {
 
     printf("\n\n");
     printf("***Test ExitThread***\n");
-    //TestExitThread();
+    TestExitThread();
 }
 
 void ExtractEnviron(char** env, StringDict& envDict) {
@@ -289,7 +289,12 @@ void TestCreateProcessWithDesktop() {
     hP = FindWindow(L"Notepad", NULL);
     printf("Before SetThreadDesktop: hwnd is: %x\n", hP);
     SetThreadDesktop(hDesktop);
-    hP = FindWindow(L"Notepad", NULL);
+    for (;;) {
+        hP = FindWindow(L"Notepad", NULL);
+        if (hP) {
+            break;
+        }
+    }
     printf("After SetThreadDesktop: hwnd is: %x\n", hP);
 
     Sleep(1000);
@@ -345,9 +350,6 @@ void TestCreateProcessWithProcThreadList() {
     }
     else {
         ZeroMemory(&siex, sizeof(siex));
-        //ZeroMemory(&si, sizeof(si));
-        //si.cb = sizeof(si);
-        //siex.StartupInfo = si;
         siex.StartupInfo.cb = sizeof(STARTUPINFOEX);
         siex.lpAttributeList = lpthattrList;
         StringCchCopy(buf, MAX_PATH, L"notepad.exe");
