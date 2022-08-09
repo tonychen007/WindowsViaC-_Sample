@@ -1,5 +1,7 @@
 ﻿#include <Windows.h>
 #include <CommCtrl.h>
+#include <pdh.h>
+#include <locale.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -33,8 +35,9 @@ void TestEnvVarAndCurrentDir();
 void TestCreateProcess();
 void TestCreateProcessWithDesktop();
 void TestCreateProcessWithProcThreadList();
-
 void TestExitThread();
+
+void TestPDH();
 
 #define DUMP_MODULE(a) DumpModule(L#a, a)
 
@@ -52,6 +55,8 @@ int main(int argc, char** argv, char** env) {
         int a = 0;
     }
     */
+
+    TestPDH();
 
     printf("***Get environ by char** env***\n");
     ExtractEnviron(env, envDict);
@@ -415,4 +420,92 @@ void TestExitThread() {
     });
 
     ExitThread(0);
+}
+
+#define GOTO_CLEANUP(x) {if (x != ERROR_SUCCESS) goto cleanup;}
+
+void TestPDH() {
+    SYSTEMTIME SampleTime;
+    HQUERY hq;
+    PDH_STATUS pdhSt;
+    HCOUNTER cpuCounter;
+    WCHAR CounterPathBuffer[PDH_MAX_COUNTER_PATH] = { '\0' };
+    PDH_BROWSE_DLG_CONFIG pdhCfg;
+    PDH_FMT_COUNTERVALUE pdhValue;
+    DWORD counterType;
+    BOOL isBrowseDlg = FALSE;
+    PDH_COUNTER_INFO* countInfo;
+    DWORD countInfoSize = 0;
+
+    //ZeroMemory(&CounterPathBuffer, sizeof(CounterPathBuffer));
+    ZeroMemory(&pdhCfg, sizeof(PDH_BROWSE_DLG_CONFIG));
+
+    if (isBrowseDlg) {
+        pdhCfg.bIncludeInstanceIndex = FALSE;
+        pdhCfg.bSingleCounterPerAdd = TRUE;
+        pdhCfg.bSingleCounterPerDialog = TRUE;
+        pdhCfg.bLocalCountersOnly = FALSE;
+        pdhCfg.bWildCardInstances = TRUE;
+        pdhCfg.bHideDetailBox = TRUE;
+        pdhCfg.bInitializePath = FALSE;
+        pdhCfg.bDisableMachineSelection = FALSE;
+        pdhCfg.bIncludeCostlyObjects = FALSE;
+        pdhCfg.bShowObjectBrowser = FALSE;
+        pdhCfg.hWndOwner = NULL;
+        pdhCfg.szReturnPathBuffer = CounterPathBuffer;
+        pdhCfg.cchReturnPathLength = PDH_MAX_COUNTER_PATH;
+        pdhCfg.pCallBack = NULL;
+        pdhCfg.dwCallBackArg = 0;
+        pdhCfg.CallBackStatus = ERROR_SUCCESS;
+        pdhCfg.dwDefaultDetailLevel = PERF_DETAIL_WIZARD;
+        pdhSt = PdhBrowseCounters(&pdhCfg);
+    }
+    else {
+        StringCchCopy(CounterPathBuffer, PDH_MAX_COUNTER_PATH, L"\\Processor Information(*)\\% Processor Time");
+    }
+
+    pdhSt = PdhOpenQuery(NULL, NULL, &hq);
+    if (pdhSt == ERROR_SUCCESS) {
+        if (isBrowseDlg)
+            if (wcslen(CounterPathBuffer) == 0)
+                goto cleanup;
+    }
+    pdhSt = PdhAddCounter(hq, CounterPathBuffer, NULL, &cpuCounter);
+    GOTO_CLEANUP(pdhSt);
+
+    pdhSt = PdhCollectQueryData(hq);
+    GOTO_CLEANUP(pdhSt);
+
+    printf("sleep 3s to collect query data\n");
+    Sleep(3000);
+    GetLocalTime(&SampleTime);
+    pdhSt = PdhCollectQueryData(hq);
+    GOTO_CLEANUP(pdhSt);
+
+    printf("%2.2d/%2.2d/%4.4d %2.2d:%2.2d:%2.2d.%3.3d\n",
+        SampleTime.wMonth,
+        SampleTime.wDay,
+        SampleTime.wYear,
+        SampleTime.wHour,
+        SampleTime.wMinute,
+        SampleTime.wSecond,
+        SampleTime.wMilliseconds);
+
+    pdhSt = PdhGetFormattedCounterValue(cpuCounter, PDH_FMT_DOUBLE, &counterType, &pdhValue);
+    GOTO_CLEANUP(pdhSt);
+
+    printf("The processor time is: %.20g\n", pdhValue.doubleValue);
+
+    pdhSt = PdhGetCounterInfo(cpuCounter, TRUE, &countInfoSize, NULL);
+    countInfo = (PDH_COUNTER_INFO*)malloc(countInfoSize);
+    pdhSt = PdhGetCounterInfo(cpuCounter, TRUE, &countInfoSize, countInfo);
+    GOTO_CLEANUP(pdhSt);
+
+    setlocale(LC_ALL, "");
+    wprintf(L"%s\n%s\n", countInfo->szFullPath, countInfo->szExplainText);
+    free(countInfo);
+    getchar();
+cleanup:
+    if (hq)
+        PdhCloseQuery(hq);
 }
