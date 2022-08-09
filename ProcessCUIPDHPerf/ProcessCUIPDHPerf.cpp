@@ -13,6 +13,26 @@
 #define MAX_INSTANCE_NAME_LEN      255  // Max length of an instance name.
 #define MAX_FULL_INSTANCE_NAME_LEN 511  // Form is parentinstancename/instancename#nnn.
 
+/* 
+*   -----------------       -------------------------       --------------------------
+    |PERF_DATA_BLOCK|    /  |   PERF_OBJECT_TYPE    |      |PERF_COUNTER_DEFINITION |
+    -----------------   /    -------------------------       --------------------------
+    | First Object  | -/    |PERF_COUNTER_DEFINITION|       |PERF_INSTANCE_DEFINITION|
+    -----------------       -------------------------       --------------------------
+    | Second Object |       |PERF_COUNTER_DEFINITION|       | Name of first Instance |
+    -----------------       -------------------------       --------------------------
+    |...............|       |PERF_COUNTER_DEFINITION|       |  PERF_COUNTER_BLOCK    |
+    -----------------       -------------------------       --------------------------
+    | Last Object   |       |  PERF_COUNTER_BLOCK   |       |PERF_INSTANCE_DEFINITION|
+    -----------------       -------------------------       --------------------------
+                                                            | Name of second Instance|
+                                                            ---------------------------
+                                                            |  PERF_COUNTER_BLOCK    |                          |                                   
+
+*/
+
+
+
 //Identifies a performance object and its counters and instances.
 typedef struct _perf_object
 {
@@ -23,8 +43,10 @@ typedef struct _perf_object
     DWORD dwNumberofInstances;
 } PERF_OBJECT, * PPERF_OBJECT;
 
+
+
 LPBYTE GetPerformanceData(LPWSTR pwszSource, DWORD dwInitialBufferSize);
-BOOL GetCounterTextStrings(LPWSTR& pCounterTextHead, LPWSTR& pHelpTextHead, LPDWORD& pTextOffsets, DWORD* pdwNumberOfOffsets);
+BOOL GetCounterTextStrings(LPWSTR& pCounterTextHead, LPWSTR& pHelpTextHead);
 LPWSTR GetText(LPWSTR pwszSource);
 BOOL BuildTextTable(LPWSTR pCounterHead, LPWSTR pHelpHead, LPDWORD* pOffsetsHead, LPDWORD pNumberOfOffsets);
 DWORD GetNumberOfTextEntries(LPWSTR pwszSource);
@@ -35,9 +57,9 @@ BOOL GetFullInstanceName(PERF_INSTANCE_DEFINITION* pInstance, DWORD CodePage, WC
 BOOL ConvertNameToUnicode(UINT CodePage, LPCSTR pNameToConvert, DWORD dwNameToConvertLen, LPWSTR pConvertedName);
 PERF_INSTANCE_DEFINITION* GetParentInstance(PERF_OBJECT_TYPE* pObject, DWORD dwInstancePosition);
 PERF_OBJECT_TYPE* GetObject(DWORD dwObjectToFind);
-int CompareObjects(const void* pObject1, const void* pObject2);
-int CompareCounters(const void* pCounter1, const void* pCounter2);
-int CompareInstances(const void* pInstance1, const void* pInstance2);
+//int CompareObjects(const void* pObject1, const void* pObject2);
+//int CompareCounters(const void* pCounter1, const void* pCounter2);
+//int CompareInstances(const void* pInstance1, const void* pInstance2);
 void PrintObjectNames(DWORD dwNumberOfObjects, BOOL fIncludeCounters, BOOL fIncludeInstances);
 void FreePerfObjects(PPERF_OBJECT pObjects, DWORD dwNumberOfObjects);
 
@@ -51,8 +73,7 @@ LPDWORD g_pTextOffsets = NULL;    // Array of DWORDS that contain the offsets to
 PPERF_OBJECT g_pObjects = NULL;   // Array of PERF_OBJECTs.
 
 
-void wmain(void)
-{
+void wmain(void) {
     DWORD dwNumberOfOffsets = 0;    // Number of elements in the pTextOffsets array.
     DWORD dwNumberOfObjects = 0;    // Number of elements in the pObjects array.
     PERF_DATA_BLOCK* pPerfBlock;
@@ -60,10 +81,10 @@ void wmain(void)
     g_pPerfDataHead = (LPBYTE)GetPerformanceData((LPWSTR)L"Global", INIT_GLOBAL_BUFFER_SIZE);
     pPerfBlock = (PERF_DATA_BLOCK*)g_pPerfDataHead;
 
-    GetCounterTextStrings(g_pCounterTextHead, g_pHelpTextHead, g_pTextOffsets, &dwNumberOfOffsets);
+    GetCounterTextStrings(g_pCounterTextHead, g_pHelpTextHead);
+    BuildTextTable(g_pCounterTextHead, g_pHelpTextHead, &g_pTextOffsets, &dwNumberOfOffsets);
     dwNumberOfObjects = pPerfBlock->NumObjectTypes;
-    g_pObjects = LoadObjects(g_pPerfDataHead + pPerfBlock->HeaderLength,
-        &dwNumberOfObjects, g_pPerfDataHead + pPerfBlock->TotalByteLength);
+    g_pObjects = LoadObjects(g_pPerfDataHead + pPerfBlock->HeaderLength, &dwNumberOfObjects, g_pPerfDataHead + pPerfBlock->TotalByteLength);
 
     PrintObjectNames(dwNumberOfObjects, TRUE, TRUE);
 }
@@ -90,12 +111,10 @@ LPBYTE GetPerformanceData(LPWSTR pwszSource, DWORD dwInitialBufferSize) {
 }
 
 
-BOOL GetCounterTextStrings(LPWSTR& pCounterTextHead, LPWSTR& pHelpTextHead, LPDWORD& pTextOffsets, DWORD* pdwNumberOfOffsets) {
+BOOL GetCounterTextStrings(LPWSTR& pCounterTextHead, LPWSTR& pHelpTextHead) {
     BOOL status = TRUE;
     pCounterTextHead = GetText((LPWSTR)L"Counter");
     pHelpTextHead = GetText((LPWSTR)L"Help");
-    BuildTextTable(pCounterTextHead, pHelpTextHead, &pTextOffsets, pdwNumberOfOffsets);
-
     return status;
 }
 
@@ -258,7 +277,7 @@ PPERF_OBJECT LoadObjects(LPBYTE pPerfDataObject, DWORD* pdwNumberOfObjects, LPBY
     //After all the data is loaded, sort the list of objects, so you can print
     //them in alphabetical order.
 
-    qsort(pObjects, *pdwNumberOfObjects, sizeof(PERF_OBJECT), CompareObjects);
+    //qsort(pObjects, *pdwNumberOfObjects, sizeof(PERF_OBJECT), CompareObjects);
 
 cleanup:
 
@@ -279,30 +298,30 @@ BOOL LoadCounters(LPDWORD* ppdwIndexes, LPBYTE pCounter, DWORD* pdwNumberOfCount
     DWORD dwSize = sizeof(DWORD) * *pdwNumberOfCounters;
     LPDWORD pIndexes = NULL;
     DWORD dwSkippedBaseRecords = 0;
+    PERF_COUNTER_DEFINITION* pCounterDef = (PERF_COUNTER_DEFINITION*)pCounter;
 
     pIndexes = (LPDWORD)malloc(dwSize);
     ZeroMemory(pIndexes, dwSize);
 
     for (DWORD i = 0, j = 0; i < *pdwNumberOfCounters; i++) {
         // Ignore base counters.
-        if ((((PERF_COUNTER_DEFINITION*)pCounter)->CounterType & PERF_COUNTER_BASE) == PERF_COUNTER_BASE)
-        {
+        if ( (pCounterDef->CounterType & PERF_COUNTER_BASE) == PERF_COUNTER_BASE) {
             dwSkippedBaseRecords++;
         }
-        else
-        {
-            pIndexes[j] = ((PERF_COUNTER_DEFINITION*)pCounter)->CounterNameTitleIndex;
+        else {
+            pIndexes[j] = pCounterDef->CounterNameTitleIndex;
             j++;
         }
 
-        pCounter += ((PERF_COUNTER_DEFINITION*)pCounter)->ByteLength;
+        pCounter += pCounterDef->ByteLength;
+        pCounterDef = (PERF_COUNTER_DEFINITION*)pCounter;
     }
 
     // Decrement so the sort works.
     *pdwNumberOfCounters -= dwSkippedBaseRecords;
 
     // Sort the index values of the object's counters.
-    qsort(pIndexes, *pdwNumberOfCounters, sizeof(DWORD), CompareCounters);
+    //qsort(pIndexes, *pdwNumberOfCounters, sizeof(DWORD), CompareCounters);
     *ppdwIndexes = pIndexes;
     fSuccess = TRUE;
 
@@ -318,21 +337,23 @@ BOOL LoadInstances(LPWSTR* ppNames, LPBYTE pInstance, DWORD dwNumberofInstances,
     DWORD dwSize = (sizeof(WCHAR) * (MAX_FULL_INSTANCE_NAME_LEN + 1)) * dwNumberofInstances;
     PERF_COUNTER_BLOCK* pCounter = NULL;
     LPWSTR pName = NULL;
+    PERF_INSTANCE_DEFINITION* pInstanceDef = (PERF_INSTANCE_DEFINITION*)pInstance;
 
     *ppNames = (LPWSTR)malloc(dwSize);
     ZeroMemory(*ppNames, dwSize);
     pName = *ppNames;
 
     for (DWORD i = 0; i < dwNumberofInstances; i++) {
-        fSuccess = GetFullInstanceName((PERF_INSTANCE_DEFINITION*)pInstance, CodePage, pName);
+        fSuccess = GetFullInstanceName(pInstanceDef, CodePage, pName);
         pName = pName + (MAX_FULL_INSTANCE_NAME_LEN + 1);
 
-        pCounter = (PERF_COUNTER_BLOCK*)(pInstance + ((PERF_INSTANCE_DEFINITION*)pInstance)->ByteLength);
-        pInstance += ((PERF_INSTANCE_DEFINITION*)pInstance)->ByteLength + pCounter->ByteLength;
+        pCounter = (PERF_COUNTER_BLOCK*)(pInstance + pInstanceDef->ByteLength);
+        pInstance += pInstanceDef->ByteLength + pCounter->ByteLength;
+        pInstanceDef = (PERF_INSTANCE_DEFINITION*)pInstance;
     }
 
     // Sort the instance names of the object's instances.
-    qsort(*ppNames, dwNumberofInstances, sizeof(WCHAR) * (MAX_FULL_INSTANCE_NAME_LEN + 1), CompareInstances);
+    //qsort(*ppNames, dwNumberofInstances, sizeof(WCHAR) * (MAX_FULL_INSTANCE_NAME_LEN + 1), CompareInstances);
 
 cleanup:
 
@@ -356,50 +377,43 @@ BOOL GetFullInstanceName(PERF_INSTANCE_DEFINITION* pInstance, DWORD CodePage, WC
     WCHAR wszInstanceName[MAX_INSTANCE_NAME_LEN + 1];
     WCHAR wszParentInstanceName[MAX_INSTANCE_NAME_LEN + 1];
 
-    if (CodePage == 0)  // Instance name is a Unicode string
-    {
+    if (CodePage == 0) { // Instance name is a Unicode string
         // PERF_INSTANCE_DEFINITION->NameLength is in bytes, so convert to characters.
         dwLength = (MAX_INSTANCE_NAME_LEN < (pInstance->NameLength / 2)) ? MAX_INSTANCE_NAME_LEN : pInstance->NameLength / 2;
         StringCchCopyN(wszInstanceName, MAX_INSTANCE_NAME_LEN + 1, (LPWSTR)(((LPBYTE)pInstance) + pInstance->NameOffset), dwLength);
         wszInstanceName[dwLength] = '\0';
     }
-    else  // Convert the multi-byte instance name to Unicode
-    {
+    else { // Convert the multi-byte instance name to Unicode
         fSuccess = ConvertNameToUnicode(CodePage,
             (LPCSTR)(((LPBYTE)pInstance) + pInstance->NameOffset),  // Points to string
             pInstance->NameLength,
             wszInstanceName);
 
-        if (FALSE == fSuccess)
-        {
+        if (FALSE == fSuccess) {
             wprintf(L"ConvertNameToUnicode for instance failed.\n");
             goto cleanup;
         }
     }
 
-    if (pInstance->ParentObjectTitleIndex)
-    {
+    if (pInstance->ParentObjectTitleIndex) {
         // Use the index to find the parent object. The pInstance->ParentObjectInstance
         // member tells you that the parent instance is the nth instance of the
         // parent object.
         pParentObject = GetObject(pInstance->ParentObjectTitleIndex);
         pParentInstance = GetParentInstance(pParentObject, pInstance->ParentObjectInstance);
 
-        if (CodePage == 0)  // Instance name is a Unicode string
-        {
+        if (CodePage == 0) { // Instance name is a Unicode string
             dwLength = (MAX_INSTANCE_NAME_LEN < pParentInstance->NameLength / 2) ? MAX_INSTANCE_NAME_LEN : pParentInstance->NameLength / 2;
             StringCchCopyN(wszParentInstanceName, MAX_INSTANCE_NAME_LEN + 1, (LPWSTR)(((LPBYTE)pParentInstance) + pParentInstance->NameOffset), dwLength);
             wszParentInstanceName[dwLength] = '\0';
         }
-        else  // Convert the multi-byte instance name to Unicode
-        {
+        else {  // Convert the multi-byte instance name to Unicode
             fSuccess = ConvertNameToUnicode(CodePage,
                 (LPCSTR)(((LPBYTE)pParentInstance) + pParentInstance->NameOffset),  //Points to string.
                 pInstance->NameLength,
                 wszParentInstanceName);
 
-            if (FALSE == fSuccess)
-            {
+            if (FALSE == fSuccess) {
                 wprintf(L"ConvertNameToUnicode for parent instance failed.\n");
                 goto cleanup;
             }
@@ -407,8 +421,7 @@ BOOL GetFullInstanceName(PERF_INSTANCE_DEFINITION* pInstance, DWORD CodePage, WC
 
         StringCchPrintf(pName, MAX_FULL_INSTANCE_NAME_LEN + 1, L"%s/%s", wszParentInstanceName, wszInstanceName);
     }
-    else
-    {
+    else {
         StringCchPrintf(pName, MAX_INSTANCE_NAME_LEN + 1, L"%s", wszInstanceName);
     }
 
@@ -456,19 +469,19 @@ PERF_OBJECT_TYPE* GetObject(DWORD dwObjectToFind)
     LPBYTE pObject = g_pPerfDataHead + ((PERF_DATA_BLOCK*)g_pPerfDataHead)->HeaderLength;
     DWORD dwNumberOfObjects = ((PERF_DATA_BLOCK*)g_pPerfDataHead)->NumObjectTypes;
     BOOL fFoundObject = FALSE;
+    PERF_OBJECT_TYPE* pObjType = (PERF_OBJECT_TYPE*)pObject;
 
-    for (DWORD i = 0; i < dwNumberOfObjects; i++)
-    {
-        if (dwObjectToFind == ((PERF_OBJECT_TYPE*)pObject)->ObjectNameTitleIndex)
-        {
+    for (DWORD i = 0; i < dwNumberOfObjects; i++) {
+        if (dwObjectToFind == pObjType->ObjectNameTitleIndex) {
             fFoundObject = TRUE;
             break;
         }
 
-        pObject += ((PERF_OBJECT_TYPE*)pObject)->TotalByteLength;
+        pObject += pObjType->TotalByteLength;
+        pObjType = (PERF_OBJECT_TYPE*)pObject;
     }
 
-    return (fFoundObject) ? (PERF_OBJECT_TYPE*)pObject : NULL;
+    return (fFoundObject) ? pObjType : NULL;
 }
 
 
@@ -477,44 +490,17 @@ PERF_INSTANCE_DEFINITION* GetParentInstance(PERF_OBJECT_TYPE* pObject, DWORD dwI
 {
     LPBYTE pInstance = (LPBYTE)pObject + pObject->DefinitionLength;
     PERF_COUNTER_BLOCK* pCounter = NULL;
+    PERF_INSTANCE_DEFINITION* pPerfInstance = (PERF_INSTANCE_DEFINITION*)pInstance;
 
     for (DWORD i = 0; i < dwInstancePosition; i++)
     {
-        pCounter = (PERF_COUNTER_BLOCK*)(pInstance + ((PERF_INSTANCE_DEFINITION*)pInstance)->ByteLength);
-        pInstance += ((PERF_INSTANCE_DEFINITION*)pInstance)->ByteLength + pCounter->ByteLength;
+        pCounter = (PERF_COUNTER_BLOCK*)(pInstance + pPerfInstance->ByteLength);
+        pInstance += pPerfInstance->ByteLength + pCounter->ByteLength;
+        pPerfInstance = (PERF_INSTANCE_DEFINITION*)pInstance;
     }
 
     return (PERF_INSTANCE_DEFINITION*)pInstance;
 }
-
-
-// Used by qsort to put the object names in alphabetical order.
-int CompareObjects(const void* pObject1, const void* pObject2)
-{
-    DWORD index1 = ((PPERF_OBJECT)pObject1)->dwObjectIndex;
-    DWORD index2 = ((PPERF_OBJECT)pObject2)->dwObjectIndex;
-    LPWSTR pName1 = g_pCounterTextHead + g_pTextOffsets[index1];
-    LPWSTR pName2 = g_pCounterTextHead + g_pTextOffsets[index2];
-    DWORD dwName1Len = (DWORD)wcslen(pName1);
-    DWORD dwName2Len = (DWORD)wcslen(pName2);
-
-    return _wcsnicmp(pName1, pName2, (dwName1Len < dwName2Len) ? dwName1Len : dwName2Len);
-}
-
-
-// Used by qsort to put the counter names in alphabetical order.
-int CompareCounters(const void* pCounter1, const void* pCounter2)
-{
-    DWORD index1 = *(DWORD*)pCounter1;
-    DWORD index2 = *(DWORD*)pCounter2;
-    LPWSTR pName1 = g_pCounterTextHead + g_pTextOffsets[index1];
-    LPWSTR pName2 = g_pCounterTextHead + g_pTextOffsets[index2];
-    DWORD dwName1Len = (DWORD)wcslen(pName1);
-    DWORD dwName2Len = (DWORD)wcslen(pName2);
-
-    return _wcsnicmp(pName1, pName2, (dwName1Len < dwName2Len) ? dwName1Len : dwName2Len);
-}
-
 
 // Used by qsort to put the instance names in alphabetical order.
 int CompareInstances(const void* pName1, const void* pName2)
@@ -543,37 +529,32 @@ void PrintObjectNames(DWORD dwNumberOfObjects, BOOL fIncludeCounters, BOOL fIncl
         // as svchost, svchost#1, and svchost#2.
         // If running on Windows 10 20H2 or later, you can avoid this issue by
         // using the "Process V2" counterset.
-        if (fIncludeInstances && g_pObjects[i].dwNumberofInstances > 0)
-        {
+        if (fIncludeInstances && g_pObjects[i].dwNumberofInstances > 0) {
             dwSerialNo = 0;
 
-            for (DWORD j = 0; j < g_pObjects[i].dwNumberofInstances; j++)
-            {
-                if (j > 0)
-                {
-                    if (!CompareInstances((void*)(g_pObjects[i].pInstanceNames + ((j - 1) * (MAX_FULL_INSTANCE_NAME_LEN + 1))),
-                        (void*)(g_pObjects[i].pInstanceNames + (j * (MAX_FULL_INSTANCE_NAME_LEN + 1)))))
-                    {
+            for (DWORD j = 0; j < g_pObjects[i].dwNumberofInstances; j++) {
+                LPWSTR pName1 = g_pObjects[i].pInstanceNames + ((j - 1) * (MAX_FULL_INSTANCE_NAME_LEN + 1));
+                if (j > 0) {
+                    LPWSTR pName2 = g_pObjects[i].pInstanceNames + (j * (MAX_FULL_INSTANCE_NAME_LEN + 1));
+                    if (!CompareInstances(pName1, pName2)) {
                         dwSerialNo++;
                     }
-                    else
-                    {
+                    else {
                         dwSerialNo = 0;
                     }
                 }
-
+                pName1 = g_pObjects[i].pInstanceNames + ((j) * (MAX_FULL_INSTANCE_NAME_LEN + 1));
                 if (dwSerialNo)
-                    wprintf(L"\t%s#%d\n", g_pObjects[i].pInstanceNames + (j * (MAX_FULL_INSTANCE_NAME_LEN + 1)), dwSerialNo);
+                    wprintf(L"\t%s#%d\n", pName1, dwSerialNo);
                 else
-                    wprintf(L"\t%s\n", g_pObjects[i].pInstanceNames + (j * (MAX_FULL_INSTANCE_NAME_LEN + 1)));
+                    wprintf(L"\t%s\n", pName1);
             }
 
             wprintf(L"\n");
         }
 
         if (fIncludeCounters) {
-            for (DWORD j = 0; j < g_pObjects[i].dwNumberOfCounters; j++)
-            {
+            for (DWORD j = 0; j < g_pObjects[i].dwNumberOfCounters; j++) {
                 index = g_pObjects[i].pdwCounterIndexes[j];
                 wprintf(L"\t%d %s\n", index, g_pCounterTextHead + g_pTextOffsets[index]);
             }
