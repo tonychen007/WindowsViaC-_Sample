@@ -33,15 +33,19 @@ protected:
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
 	void InitEnvListControl();
-	void InitProcessDropListControl();
+	void InitDropListControl();
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
 	afx_msg void OnGetdispinfoEnvList(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnBnClickedGetEnvVarBtn();
+	afx_msg void OnBnClickedEnumProcess();
+	afx_msg void OnBnClickedEnumModule();
 
+	void AddText(PCTSTR pszFormat, ...);
 	void EnumProcess();
+	void EnumModule();
 	void ShowProcessInfo(DWORD dwPid);
-	void CProcessGUIDlg::AddText(PCTSTR pszFormat, ...);
-	afx_msg void OnSelchangeProcessDroplist();
+	void ShowModuleInfo(LPCWSTR pzName);
+	afx_msg void OnSelchangeDroplist();
 
 	DECLARE_MESSAGE_MAP()
 
@@ -52,8 +56,9 @@ public:
 	CListCtrlEdit m_listCtrl;
 	StringDict m_envDict;
 
-	CComboBox* m_processDropList;
-	CEdit* m_processInfoEdit;
+	CComboBox* m_dropList;
+	CEdit* m_infoEdit;
 
 	std::wstring m_str;
+	int m_isModule;
 };

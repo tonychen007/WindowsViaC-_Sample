@@ -10,6 +10,8 @@
 #include <windowsx.h>
 #include <strsafe.h>
 #include <winternl.h>
+#include <shlwapi.h>
+
 #include "Toolhelp.h"
 #include "Tools.h"
 
@@ -42,7 +44,9 @@ BEGIN_MESSAGE_MAP(CProcessGUIDlg, CDialog)
 	ON_WM_LBUTTONDOWN()
 	ON_NOTIFY(LVN_GETDISPINFO, IDC_ENV_LIST, &CProcessGUIDlg::OnGetdispinfoEnvList)
 	ON_BN_CLICKED(IDC_GET_ENV_VAR_BTN, &CProcessGUIDlg::OnBnClickedGetEnvVarBtn)
-	ON_CBN_SELCHANGE(IDC_PROCESS_DROPLIST, &CProcessGUIDlg::OnSelchangeProcessDroplist)
+	ON_CBN_SELCHANGE(IDC_DROPLIST, &CProcessGUIDlg::OnSelchangeDroplist)
+	ON_BN_CLICKED(IDC_ENUM_PROCESS, &CProcessGUIDlg::OnBnClickedEnumProcess)
+	ON_BN_CLICKED(IDC_ENUM_MODULE, &CProcessGUIDlg::OnBnClickedEnumModule)
 END_MESSAGE_MAP()
 
 
@@ -58,7 +62,8 @@ BOOL CProcessGUIDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 設定小圖示
 
 	InitEnvListControl();
-	InitProcessDropListControl();
+	InitDropListControl();
+	m_isModule = FALSE;
 
 	return TRUE;  // 傳回 TRUE，除非您對控制項設定焦點
 }
@@ -129,7 +134,7 @@ void CProcessGUIDlg::InitEnvListControl() {
 	m_listCtrl.InsertColumn(1, &lvcol2);
 }
 
-void CProcessGUIDlg::InitProcessDropListControl() {
+void CProcessGUIDlg::InitDropListControl() {
 	CRect comboRect;
 	int itemHeight;
 	TEXTMETRIC tm;
@@ -137,21 +142,20 @@ void CProcessGUIDlg::InitProcessDropListControl() {
 	GetTextMetrics(*pDC, &tm);
 	CONST int dropCount = 10;
 
-	m_processDropList = (CComboBox*)GetDlgItem(IDC_PROCESS_DROPLIST);
-	m_processInfoEdit = (CEdit*)GetDlgItem(IDC_PROCESS_INFO_EDIT);
+	m_dropList = (CComboBox*)GetDlgItem(IDC_DROPLIST);
+	m_infoEdit = (CEdit*)GetDlgItem(IDC_INFO_EDIT);
 
 	itemHeight = tm.tmHeight * 2;
-	m_processDropList->SetItemHeight(-1, itemHeight);
-	m_processDropList->GetClientRect(&comboRect);
-	m_processDropList->SetWindowPos(NULL, 0, 0, comboRect.right, dropCount * itemHeight, SWP_NOMOVE | SWP_NOZORDER);
+	m_dropList->SetItemHeight(-1, itemHeight);
+	m_dropList->GetClientRect(&comboRect);
+	m_dropList->SetWindowPos(NULL, 0, 0, comboRect.right, dropCount * itemHeight, SWP_NOMOVE | SWP_NOZORDER);
 	EnumProcess();
-	m_processDropList->SetCurSel(0);
-	m_processDropList->SetRedraw();
-	m_processDropList->InvalidateRect(NULL, TRUE);
-	m_processDropList->UpdateData();
-	OnSelchangeProcessDroplist();
+	m_dropList->SetCurSel(0);
+	m_dropList->SetRedraw();
+	m_dropList->InvalidateRect(NULL, TRUE);
+	m_dropList->UpdateData();
+	OnSelchangeDroplist();
 }
-
 
 void CProcessGUIDlg::OnLButtonDown(UINT nFlags, CPoint point) {
 	RECT rect;
@@ -220,6 +224,41 @@ void CProcessGUIDlg::OnBnClickedGetEnvVarBtn() {
 	m_listCtrl.SetItemCount(m_envDict.size());
 }
 
+void CProcessGUIDlg::OnBnClickedEnumProcess() {
+	m_dropList->ResetContent();
+	m_infoEdit->SetWindowText(L"");
+	m_str.clear();
+
+	EnumProcess();
+	m_isModule = FALSE;
+	m_dropList->SetCurSel(0);
+	OnSelchangeDroplist();
+}
+
+void CProcessGUIDlg::OnBnClickedEnumModule() {
+	m_dropList->ResetContent();
+	m_infoEdit->SetWindowText(L"");
+	m_str.clear();
+
+	EnumModule();
+	m_isModule = TRUE;
+	m_dropList->SetCurSel(0);
+	OnSelchangeDroplist();
+}
+
+
+// Add a string to an edit control
+void CProcessGUIDlg::AddText(PCTSTR pszFormat, ...) {
+
+	va_list argList;
+	va_start(argList, pszFormat);
+
+	TCHAR sz[4096];
+	_vstprintf_s(sz, 4096, pszFormat, argList);
+	m_str.append(sz);
+	va_end(argList);
+}
+
 void CProcessGUIDlg::EnumProcess() {
 	CToolhelp thProcesses(TH32CS_SNAPPROCESS);
 	PROCESSENTRY32 pe = { sizeof(pe) };
@@ -240,30 +279,49 @@ void CProcessGUIDlg::EnumProcess() {
 		StringCchPrintf(sz, _countof(sz), TEXT("%s     PID:0x%08X  %s    [%s]"),
 			pszExeFile, pe.th32ProcessID, L"", L"");
 
-		int n = m_processDropList->AddString(sz);
-		m_processDropList->SetItemData(n, pe.th32ProcessID);
+		int n = m_dropList->AddString(sz);
+		m_dropList->SetItemData(n, pe.th32ProcessID);
 
-		//
 		fOk = thProcesses.ProcessNext(&pe);
 	}
 }
 
-// Add a string to an edit control
-void CProcessGUIDlg::AddText(PCTSTR pszFormat, ...) {
+void CProcessGUIDlg::EnumModule() {
+	CList<CString> listBox;
+	CString str;
+	CToolhelp thProcesses(TH32CS_SNAPPROCESS);
+	PROCESSENTRY32 pe = { sizeof(pe) };
+	BOOL fOk = thProcesses.ProcessFirst(&pe);
 
-	va_list argList;
-	va_start(argList, pszFormat);
+	while (fOk) {
+		CToolhelp thModules(TH32CS_SNAPMODULE, pe.th32ProcessID);
+		MODULEENTRY32 me = { sizeof(me) };
+		BOOL fOk2 = thModules.ModuleFirst(&me);
 
-	TCHAR sz[4096];
-	_vstprintf_s(sz, 4096, pszFormat, argList);
-	m_str.append(sz);
-	va_end(argList);
+		while (fOk2) {
+			POSITION n = listBox.Find(me.szExePath);
+			if (n == NULL) {
+				listBox.AddTail(me.szExePath);
+			}
+			fOk2 = thModules.ModuleNext(&me);
+		}
+
+		fOk = thProcesses.ProcessNext(&pe);
+	}
+
+	for (int i = 0; i < listBox.GetSize(); i++) {
+		POSITION p = listBox.FindIndex(i);
+		str = listBox.GetAt(p);
+		int pos  = str.ReverseFind(L'\\');
+		LPCWSTR pszName = str.GetString();
+		pszName += pos + 1;
+		int n = m_dropList->AddString(pszName);
+	}
 }
 
 void CProcessGUIDlg::ShowProcessInfo(DWORD dwPid) {
-	m_processInfoEdit->Clear();
+	m_infoEdit->SetWindowText(L"");
 	m_str.clear();
-	m_str.reserve(4096);
 
 	DWORD dwSize;
 	SIZE_T sz;
@@ -355,19 +413,108 @@ void CProcessGUIDlg::ShowProcessInfo(DWORD dwPid) {
 		AddText(TEXT("Owner is: %ws\r\n"), szBuf);
 	}
 
-	module:
+module:
 	AddText(TEXT("\r\nModules Information:\r\n")
-		TEXT("  Usage  \t%s(%s)%10s    Module\r\n"),
+		TEXT("  Usage  \t%s(%s)%36s    Module\r\n"),
 		TEXT("BaseAddr"),
-		TEXT("ImagAddr"), TEXT("Size"));
-	m_processInfoEdit->SetWindowText(m_str.data());
+		TEXT("ImageAddr"), TEXT("Size"));
 
-	// Get Module name, address, size, fullpath
-	IMAGE_DOS_HEADER dosHeader;
+	CToolhelp th2 = CToolhelp(TH32CS_SNAPALL, dwPid);
+	MODULEENTRY32 me = { sizeof(me) };
+	fOk = th2.ModuleFirst(&me);
+	while (fOk) {
+		if (me.ProccntUsage == 65535) {
+			// Module was implicitly loaded and cannot be unloaded
+			AddText(TEXT("  Fixed"));
+		}
+		else {
+			AddText(TEXT("  %5d"), me.ProccntUsage);
+		}
+
+
+		// Get module address
+		IMAGE_DOS_HEADER idh;
+		IMAGE_NT_HEADERS inth;
+		PVOID pvPerfAddr = NULL;
+		Toolhelp32ReadProcessMemory(dwPid, me.modBaseAddr, &idh, sizeof(idh), NULL);
+		if (idh.e_magic == IMAGE_DOS_SIGNATURE) {
+			Toolhelp32ReadProcessMemory(dwPid, me.modBaseAddr + idh.e_lfanew, &inth, sizeof(inth), NULL);
+			if (inth.Signature == IMAGE_NT_SIGNATURE) {
+				pvPerfAddr = (PVOID)inth.OptionalHeader.ImageBase;
+			}
+		}
+
+		// Try to format the size in kb.
+		TCHAR szFormattedSize[64];
+		if (StrFormatKBSize(me.modBaseSize, szFormattedSize, _countof(szFormattedSize)) == NULL) {
+			StringCchPrintf(szFormattedSize, _countof(szFormattedSize), TEXT("%10u"), me.modBaseSize);
+		}
+
+		AddText(TEXT("\t\t%p(%p) %20s    %10s\r\n"), me.modBaseAddr, pvPerfAddr, szFormattedSize, me.szExePath);
+		fOk = th2.ModuleNext(&me);
+	}
+
+
+	// show thread info
+	AddText(TEXT("\r\nThread Information:\r\n")
+		TEXT("  TID  \t\tPriority\r\n"));
+	THREADENTRY32 te = {sizeof(te)};
+	fOk = th2.ThreadFirst(&te);
+	while (fOk) {
+		if (te.th32OwnerProcessID == dwPid) {
+			AddText(TEXT("   %08X       %2d\r\n"),
+				te.th32ThreadID, te.tpBasePri);
+		}
+		fOk = th2.ThreadNext(&te);
+	}
+
+	m_infoEdit->SetWindowText(m_str.data());
 }
 
-void CProcessGUIDlg::OnSelchangeProcessDroplist() {
-	int idx = m_processDropList->GetCurSel();
-	DWORD pid = m_processDropList->GetItemData(idx);
-	ShowProcessInfo(pid);
+void CProcessGUIDlg::ShowModuleInfo(LPCWSTR pszName) {
+	m_infoEdit->SetWindowText(L"");
+	m_str.clear();
+
+	CToolhelp th(TH32CS_SNAPPROCESS);
+	PROCESSENTRY32 pe = { sizeof(pe) };
+	BOOL fOk = th.ProcessFirst(&pe);
+
+	AddText(TEXT("Pathname: %s\r\n\r\n"), pszName);
+	AddText(TEXT("Process Information:\r\n"));
+	AddText(TEXT("     PID    %10s          Process\r\n"), TEXT("BaseAddr"));
+
+	while (fOk) {
+		CToolhelp th2(TH32CS_SNAPMODULE, pe.th32ProcessID);
+		MODULEENTRY32 me = { sizeof(me) };
+		BOOL fOk2 = th2.ModuleFirst(&me);
+
+		while (fOk2) {
+			TCHAR* str = _tcsrchr(me.szExePath, L'\\');
+			str++;
+
+			if (_tcscmp(str, pszName) == 0) {
+				AddText(TEXT("  %08X    %p  %s\r\n"), pe.th32ProcessID, me.modBaseAddr, pe.szExeFile);
+			}
+			fOk2 = th2.ModuleNext(&me);
+		}
+
+		fOk = th.ProcessNext(&pe);
+	}
+
+	m_infoEdit->SetWindowText(m_str.data());
 }
+
+void CProcessGUIDlg::OnSelchangeDroplist() {
+	int idx = m_dropList->GetCurSel();
+
+	if (!m_isModule) {
+		DWORD pid = m_dropList->GetItemData(idx);
+		ShowProcessInfo(pid);
+	}
+	else {
+		TCHAR buf[256] = { '\0' };
+		m_dropList->GetLBText(idx, buf);
+		ShowModuleInfo(buf);
+	}
+}
+
