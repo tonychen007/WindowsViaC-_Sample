@@ -31,6 +31,7 @@ protected:
 	// 產生的訊息對應函式
 	virtual BOOL OnInitDialog();
 	afx_msg void OnPaint();
+	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg HCURSOR OnQueryDragIcon();
 	void InitEnvListControl();
 	void InitDropListControl();
@@ -61,4 +62,6 @@ public:
 
 	std::wstring m_str;
 	int m_isModule;
+
+	CPoint m_oldWinPos;
 };

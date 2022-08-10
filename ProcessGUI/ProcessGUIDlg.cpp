@@ -47,6 +47,7 @@ BEGIN_MESSAGE_MAP(CProcessGUIDlg, CDialog)
 	ON_CBN_SELCHANGE(IDC_DROPLIST, &CProcessGUIDlg::OnSelchangeDroplist)
 	ON_BN_CLICKED(IDC_ENUM_PROCESS, &CProcessGUIDlg::OnBnClickedEnumProcess)
 	ON_BN_CLICKED(IDC_ENUM_MODULE, &CProcessGUIDlg::OnBnClickedEnumModule)
+	ON_WM_SIZE()
 END_MESSAGE_MAP()
 
 
@@ -64,6 +65,11 @@ BOOL CProcessGUIDlg::OnInitDialog()
 	InitEnvListControl();
 	InitDropListControl();
 	m_isModule = FALSE;
+
+	CRect rect;
+	GetClientRect(&rect);
+	m_oldWinPos.x = rect.right - rect.left;
+	m_oldWinPos.y = rect.bottom - rect.top;
 
 	return TRUE;  // 傳回 TRUE，除非您對控制項設定焦點
 }
@@ -90,6 +96,57 @@ void CProcessGUIDlg::OnPaint()
 	else
 	{
 		CDialog::OnPaint();
+	}
+}
+
+void CProcessGUIDlg::OnSize(UINT nType, int cx, int cy) {
+	CDialog::OnSize(nType, cx, cy);
+
+	if (nType != SIZE_MINIMIZED) {
+		int woc;
+		float diff[2];
+		POINT newWinPos;
+		CRect rect;
+		CRect clientRect;
+		GetClientRect(&clientRect);
+
+		newWinPos.x = clientRect.right - clientRect.left;
+		newWinPos.y = clientRect.bottom - clientRect.top;
+		diff[0] = (float)newWinPos.x - m_oldWinPos.x;
+		diff[1] = (float)newWinPos.y - m_oldWinPos.y;
+
+		CPoint oldTopLeftPt, topLeftPt;
+		CPoint oldBottomRightPt, bottomRightPt;
+		HWND hwndChild = ::GetWindow(m_hWnd, GW_CHILD);
+
+		while (hwndChild) {
+			woc = ::GetDlgCtrlID(hwndChild);
+			GetDlgItem(woc)->GetWindowRect(rect);
+			ScreenToClient(rect);
+			oldTopLeftPt = rect.TopLeft();
+			oldBottomRightPt = rect.BottomRight();
+
+			topLeftPt.x = oldTopLeftPt.x;
+			topLeftPt.y = long(oldTopLeftPt.y + diff[1]);
+			bottomRightPt.x = long(oldBottomRightPt.x + diff[0]);
+			bottomRightPt.y = long(oldBottomRightPt.y + diff[1]);
+			rect.SetRect(topLeftPt, bottomRightPt);
+			if (woc == IDC_GET_ENV_VAR_BTN || woc == IDC_ENUM_PROCESS || woc == IDC_ENUM_MODULE) {
+				// do not change btn width x
+				bottomRightPt.x = oldBottomRightPt.x;
+				rect.SetRect(topLeftPt, bottomRightPt);
+			}
+
+			// just change ENV_LIST height and width
+			if (woc == IDC_ENV_LIST) {
+				topLeftPt.y = oldTopLeftPt.y;
+				rect.SetRect(topLeftPt, bottomRightPt);
+			}
+
+			GetDlgItem(woc)->MoveWindow(rect, TRUE);
+			hwndChild = ::GetWindow(hwndChild, GW_HWNDNEXT);
+		}
+		m_oldWinPos = newWinPos;
 	}
 }
 
@@ -517,4 +574,3 @@ void CProcessGUIDlg::OnSelchangeDroplist() {
 		ShowModuleInfo(buf);
 	}
 }
-
