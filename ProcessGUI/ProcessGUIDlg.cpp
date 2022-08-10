@@ -11,6 +11,7 @@
 #include <strsafe.h>
 #include <winternl.h>
 #include <shlwapi.h>
+#include <AclAPI.h>
 
 #include "Toolhelp.h"
 #include "Tools.h"
@@ -387,6 +388,8 @@ void CProcessGUIDlg::ShowProcessInfo(DWORD dwPid) {
 	PROCESS_BASIC_INFORMATION  pbi;
 	SYSTEM_PROCESS_INFORMATION* spi;
 	TCHAR szBuf[4096];
+	HANDLE hToken;
+	HANDLE hProcess;
 
 	// get parant-pid, process priority, thread num, heap num
 	CToolhelp th(TH32CS_SNAPALL);
@@ -417,7 +420,7 @@ void CProcessGUIDlg::ShowProcessInfo(DWORD dwPid) {
 	}
 
 	// get command line
-	HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwPid);
+	hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwPid);
 	if (hProcess == 0)
 		goto module;
 
@@ -439,7 +442,6 @@ void CProcessGUIDlg::ShowProcessInfo(DWORD dwPid) {
 	}
 
 	// get owner
-	HANDLE hToken;
 	CToolhelp::EnablePrivilege(SE_TCB_NAME, TRUE);
 	ret = OpenProcessToken(hProcess, TOKEN_QUERY, &hToken);
 	FAIL_GOTO_MODULE(ret, module);
@@ -470,6 +472,8 @@ void CProcessGUIDlg::ShowProcessInfo(DWORD dwPid) {
 		AddText(TEXT("Owner is: %ws\r\n"), szBuf);
 	}
 
+	CloseHandle(hProcess);
+	CloseHandle(hToken);
 module:
 	AddText(TEXT("\r\nModules Information:\r\n")
 		TEXT("  Usage  \t%s(%s)%36s    Module\r\n"),
