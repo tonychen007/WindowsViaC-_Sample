@@ -2,6 +2,7 @@
 
 #include <Windows.h>
 #include <shlobj.h>
+#include <winternl.h>
 
 DWORD GetProcessIDByName(LPCWSTR pName);
 BOOL GetProcessElevation(TOKEN_ELEVATION_TYPE* pElevationType, BOOL* pIsAdmin);
@@ -10,9 +11,15 @@ BOOL GetProcessElevation(TOKEN_ELEVATION_TYPE* pElevationType, BOOL* pIsAdmin);
 #define NT_SUCCESS(status)				 (status >= 0)
 #define STATUS_INFO_LENGTH_MISMATCH      ((NTSTATUS)0xC0000004L)
 
+/*
 enum PROCESSINFOCLASS {
 	ProcessHandleInformation = 51
 };
+
+enum SYSTEMINFORMATIONCLASS {
+	SystemProcessInformation = 5
+};
+*/
 
 typedef struct _PROCESS_HANDLE_TABLE_ENTRY_INFO {
 	HANDLE HandleValue;
@@ -39,15 +46,26 @@ extern "C" NTSTATUS NTAPI NtQueryInformationProcess(
 	_Out_opt_ PULONG ReturnLength);
 
 
+extern "C" NTSTATUS WINAPI ZwQuerySystemInformation(
+	_In_      SYSTEM_INFORMATION_CLASS   SystemInformationClass,
+	_Inout_   PVOID                    SystemInformation,
+	_In_      ULONG                    SystemInformationLength,
+	_Out_opt_ PULONG                   ReturnLength
+);
+
+/**
 typedef enum _OBJECT_INFORMATION_CLASS {
 	ObjectNameInformation = 1
 } OBJECT_INFORMATION_CLASS;
+*/
 
+/*
 typedef struct _UNICODE_STRING {
 	USHORT Length;
 	USHORT MaximumLength;
 	PWSTR  Buffer;
 } UNICODE_STRING;
+*/
 
 typedef struct _OBJECT_NAME_INFORMATION {
 	UNICODE_STRING Name;

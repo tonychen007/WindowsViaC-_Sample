@@ -1,5 +1,6 @@
 ﻿
 #include <Windows.h>
+#include <winternl.h>
 #include <TlHelp32.h>
 #include <stdio.h>
 #include <memory>
@@ -126,7 +127,7 @@ void GetProcessHandleInformation(HANDLE h, std::unique_ptr<BYTE[]>& buffer) {
 	
 	for (;;) {
 		buffer = std::make_unique<BYTE[]>(size);
-		auto status = ::NtQueryInformationProcess(h, ProcessHandleInformation,
+		auto status = ::NtQueryInformationProcess(h, (PROCESSINFOCLASS)51,
 			buffer.get(), size, &size);
 		if (NT_SUCCESS(status))
 			break;
@@ -149,7 +150,7 @@ void FindProcessHandle(BYTE* buffer, LPCWSTR pszHandleName, HANDLE hP, DWORD pid
 		if (!::DuplicateHandle(hP, hv, ::GetCurrentProcess(), &hTarget, 0, FALSE, DUPLICATE_SAME_ACCESS))
 			continue;
 
-		auto status = ::NtQueryObject(hTarget, ObjectNameInformation, nameBuffer, sizeof(nameBuffer), nullptr);
+		auto status = ::NtQueryObject(hTarget, (OBJECT_INFORMATION_CLASS)1, nameBuffer, sizeof(nameBuffer), nullptr);
 		::CloseHandle(hTarget);
 		if (!NT_SUCCESS(status))
 			continue;

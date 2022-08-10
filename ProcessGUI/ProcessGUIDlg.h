@@ -32,12 +32,17 @@ protected:
 	virtual BOOL OnInitDialog();
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
+	void InitEnvListControl();
+	void InitProcessDropListControl();
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
 	afx_msg void OnGetdispinfoEnvList(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnBnClickedGetEnvVarBtn();
 
-	void InitEnvListControl();
-	void InitProcessDropListControl();
+	void EnumProcess();
+	void ShowProcessInfo(DWORD dwPid);
+	void CProcessGUIDlg::AddText(PCTSTR pszFormat, ...);
+	afx_msg void OnSelchangeProcessDroplist();
+
 	DECLARE_MESSAGE_MAP()
 
 public:
@@ -48,4 +53,7 @@ public:
 	StringDict m_envDict;
 
 	CComboBox* m_processDropList;
+	CEdit* m_processInfoEdit;
+
+	std::wstring m_str;
 };
