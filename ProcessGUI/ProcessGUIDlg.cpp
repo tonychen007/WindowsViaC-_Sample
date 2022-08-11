@@ -283,6 +283,9 @@ void CProcessGUIDlg::OnBnClickedGetEnvVarBtn() {
 }
 
 void CProcessGUIDlg::OnBnClickedEnumProcess() {
+	if (!m_isModule)
+		return;
+
 	m_dropList->ResetContent();
 	m_infoEdit->SetWindowText(L"");
 	m_str.clear();
@@ -294,6 +297,9 @@ void CProcessGUIDlg::OnBnClickedEnumProcess() {
 }
 
 void CProcessGUIDlg::OnBnClickedEnumModule() {
+	if (m_isModule)
+		return;
+
 	m_dropList->ResetContent();
 	m_infoEdit->SetWindowText(L"");
 	m_str.clear();

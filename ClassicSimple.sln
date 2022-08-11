@@ -38,6 +38,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "00.CommonFilesLib", "Common
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "04.ProcessCUIPDHPerf", "ProcessCUIPDHPerf\ProcessCUIPDHPerf.vcxproj", "{C2C247C4-65FC-4A53-AA00-CDC0007A2472}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "05.Job", "Job\Job.vcxproj", "{3064D441-CAEC-45F5-AE06-5ADE0BE3B2FC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -134,6 +136,14 @@ Global
 		{C2C247C4-65FC-4A53-AA00-CDC0007A2472}.Release|x64.Build.0 = Release|x64
 		{C2C247C4-65FC-4A53-AA00-CDC0007A2472}.Release|x86.ActiveCfg = Release|Win32
 		{C2C247C4-65FC-4A53-AA00-CDC0007A2472}.Release|x86.Build.0 = Release|Win32
+		{3064D441-CAEC-45F5-AE06-5ADE0BE3B2FC}.Debug|x64.ActiveCfg = Debug|x64
+		{3064D441-CAEC-45F5-AE06-5ADE0BE3B2FC}.Debug|x64.Build.0 = Debug|x64
+		{3064D441-CAEC-45F5-AE06-5ADE0BE3B2FC}.Debug|x86.ActiveCfg = Debug|Win32
+		{3064D441-CAEC-45F5-AE06-5ADE0BE3B2FC}.Debug|x86.Build.0 = Debug|Win32
+		{3064D441-CAEC-45F5-AE06-5ADE0BE3B2FC}.Release|x64.ActiveCfg = Release|x64
+		{3064D441-CAEC-45F5-AE06-5ADE0BE3B2FC}.Release|x64.Build.0 = Release|x64
+		{3064D441-CAEC-45F5-AE06-5ADE0BE3B2FC}.Release|x86.ActiveCfg = Release|Win32
+		{3064D441-CAEC-45F5-AE06-5ADE0BE3B2FC}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
