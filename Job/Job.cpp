@@ -18,6 +18,7 @@ void TestJobUILimit();
 void TestJobUIHandleLimit();
 void TestQueryInformationJob();
 void TestBreakAwayFromJob();
+void TestEnumProcessInJob();
 
 int main() {
 	TestCloseJob();
@@ -27,23 +28,27 @@ int main() {
 
 	printf("\n");
 	printf("Test job ext limit\n");
-	//TestJobExtLimit();
+	TestJobExtLimit();
 
 	printf("\n");
 	printf("Test job ui limit\n");
-	//TestJobUILimit();
+	TestJobUILimit();
 
 	printf("\n");
 	printf("Test job ui handle limit\n");
-	//TestJobUIHandleLimit();
+	TestJobUIHandleLimit();
 
 	printf("\n");
 	printf("Test job information query\n");
-	//TestQueryInformationJob();
+	TestQueryInformationJob();
 
 	printf("\n");
 	printf("Test job break away\n");
-	TestBreakAwayFromJob();
+	//TestBreakAwayFromJob();
+
+	printf("\n");
+	printf("Test enum process job\n");
+	TestEnumProcessInJob();
 
 	return 0;
 }
@@ -110,6 +115,11 @@ void TestJobExtLimit() {
 		Sleep(10);
 	}
 
+	// remove mem limit
+	extLimit.BasicLimitInformation.LimitFlags &= ~JOB_OBJECT_LIMIT_JOB_MEMORY;
+	extLimit.JobMemoryLimit = 0;
+	SetInformationJobObject(hJob, JobObjectExtendedLimitInformation, &extLimit, sizeof(extLimit));
+
 	CloseHandle(hJob);
 	CloseHandle(hProc);
 }
@@ -169,7 +179,7 @@ void TestJobUIHandleLimit() {
 
 	// we need to elevate right
 	DWORD pid = GetProcessIDByName(L"winlogon.exe");
-	hSysProc = OpenProcess(MAXIMUM_ALLOWED, FALSE, pid);
+	hSysProc = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
 	OpenProcessToken(hSysProc, TOKEN_QUERY | TOKEN_DUPLICATE | TOKEN_ASSIGN_PRIMARY, &hToken);
 	DuplicateTokenEx(hToken, MAXIMUM_ALLOWED, NULL, SecurityIdentification, TokenPrimary, &hSysTokenDup);
 
@@ -240,5 +250,33 @@ void TestBreakAwayFromJob() {
 	si.cb = sizeof(si);
 	printf("Create process break from job, terminate job will not terminate the subprocess\n");
 	CreateProcess(L"C:\\Windows\\notepad.exe", NULL, NULL, NULL, FALSE, CREATE_BREAKAWAY_FROM_JOB, NULL, NULL, &si, &pi);
-	TerminateJobObject(hJob, 0);
+	//TerminateJobObject(hJob, 0);
+
+	CloseHandle(hJob);
+	CloseHandle(hProc);
+}
+
+void TestEnumProcessInJob() {
+	const int MAX_PROCESSES = 10;
+	JOBOBJECT_BASIC_PROCESS_ID_LIST* pJobList;
+	HANDLE hJob;
+	HANDLE hProc;
+	CREATE_JOB_AND_GET_PROC(hJob, hProc);
+
+	AssignProcessToJobObject(hJob, hProc);
+	SIZE_T cb = sizeof(JOBOBJECT_BASIC_PROCESS_ID_LIST) + (MAX_PROCESSES - 1) * sizeof(SIZE_T);
+	pJobList = (JOBOBJECT_BASIC_PROCESS_ID_LIST*)malloc(cb);
+	pJobList->NumberOfProcessIdsInList = MAX_PROCESSES;
+	QueryInformationJobObject(hJob, JobObjectBasicProcessIdList, pJobList, cb, 0);
+
+	for (int i = 0; i < pJobList->NumberOfProcessIdsInList; i++) {
+		int pid = pJobList->ProcessIdList[i];
+		printf("Pid in job: %d\n", pid);
+	}
+
+	printf("Press any key...\n");
+	getchar();
+	free(pJobList);
+	CloseHandle(hJob);
+	CloseHandle(hProc);
 }
