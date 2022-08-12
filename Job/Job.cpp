@@ -16,6 +16,8 @@ void TestJobBasicLimit();
 void TestJobExtLimit();
 void TestJobUILimit();
 void TestJobUIHandleLimit();
+void TestQueryInformationJob();
+void TestBreakAwayFromJob();
 
 int main() {
 	TestCloseJob();
@@ -29,11 +31,19 @@ int main() {
 
 	printf("\n");
 	printf("Test job ui limit\n");
-	TestJobUILimit();
+	//TestJobUILimit();
 
 	printf("\n");
 	printf("Test job ui handle limit\n");
-	TestJobUIHandleLimit();
+	//TestJobUIHandleLimit();
+
+	printf("\n");
+	printf("Test job information query\n");
+	//TestQueryInformationJob();
+
+	printf("\n");
+	printf("Test job break away\n");
+	TestBreakAwayFromJob();
 
 	return 0;
 }
@@ -50,6 +60,9 @@ void TestCloseJob() {
 	hJob = OpenJobObject(JOB_OBJECT_ALL_ACCESS, FALSE, g_pszJob);
 
 	printf("Close jobobject and open again, but should fail. Job: 0x%X\n", hJob);
+
+	CloseHandle(hJob);
+	CloseHandle(hProc);
 }
 
 void TestJobBasicLimit() {
@@ -182,4 +195,50 @@ void TestJobUIHandleLimit() {
 
 	CloseHandle(hJob);
 	CloseHandle(hProc);
+}
+
+void TestQueryInformationJob() {
+	JOBOBJECT_BASIC_LIMIT_INFORMATION basicLimit, basicLimit2;
+	LARGE_INTEGER li;
+	HANDLE hJob;
+	HANDLE hProc;
+	CREATE_JOB_AND_GET_PROC(hJob, hProc);
+
+	// the time is 100-nano, so set to 5 secs
+	li.QuadPart = 5 * 10 * 1000 * 1000;
+	basicLimit.PerProcessUserTimeLimit = li;
+	basicLimit.LimitFlags = JOB_OBJECT_LIMIT_PROCESS_TIME;
+	SetInformationJobObject(hJob, JobObjectBasicLimitInformation, &basicLimit, sizeof(basicLimit));
+	QueryInformationJobObject(hJob, JobObjectBasicLimitInformation, &basicLimit2, sizeof(basicLimit2), 0);
+
+	CloseHandle(hJob);
+	CloseHandle(hProc);
+}
+
+void TestBreakAwayFromJob() {
+	JOBOBJECT_EXTENDED_LIMIT_INFORMATION extLimit = { 0 };
+	LARGE_INTEGER li;
+	HANDLE hJob;
+	HANDLE hProc;
+	STARTUPINFO si = { sizeof(si) };
+	PROCESS_INFORMATION pi = { 0 };
+	BOOL ret;
+	CREATE_JOB_AND_GET_PROC(hJob, hProc);
+
+	extLimit.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_BREAKAWAY_OK;
+	ret = SetInformationJobObject(hJob, JobObjectExtendedLimitInformation, &extLimit, sizeof(extLimit));
+	AssignProcessToJobObject(hJob, hProc);
+
+	printf("Create process without break from job\n");
+	CreateProcess(L"C:\\Windows\\notepad.exe", NULL, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi);
+	//TerminateJobObject(hJob, 0);
+	TerminateProcess(pi.hProcess, 0);
+	CloseHandle(pi.hProcess);
+
+	ZeroMemory(&si, sizeof(si));
+	ZeroMemory(&pi, sizeof(pi));
+	si.cb = sizeof(si);
+	printf("Create process break from job, terminate job will not terminate the subprocess\n");
+	CreateProcess(L"C:\\Windows\\notepad.exe", NULL, NULL, NULL, FALSE, CREATE_BREAKAWAY_FROM_JOB, NULL, NULL, &si, &pi);
+	TerminateJobObject(hJob, 0);
 }
