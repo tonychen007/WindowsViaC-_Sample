@@ -38,6 +38,15 @@ typedef struct _PROCESS_HANDLE_SNAPSHOT_INFORMATION {
 	PROCESS_HANDLE_TABLE_ENTRY_INFO Handles[1];
 } PROCESS_HANDLE_SNAPSHOT_INFORMATION, * PPROCESS_HANDLE_SNAPSHOT_INFORMATION;
 
+typedef struct _THREAD_BASIC_INFORMATION {
+	NTSTATUS ExitStatus;
+	PTEB TebBaseAddress;
+	CLIENT_ID ClientId;
+	ULONG_PTR AffinityMask;
+	KPRIORITY Priority;
+	LONG BasePriority;
+} THREAD_BASIC_INFORMATION, * PTHREAD_BASIC_INFORMATION;
+
 extern "C" NTSTATUS NTAPI NtQueryInformationProcess(
 	_In_ HANDLE ProcessHandle,
 	_In_ PROCESSINFOCLASS ProcessInformationClass,
@@ -45,6 +54,13 @@ extern "C" NTSTATUS NTAPI NtQueryInformationProcess(
 	_In_ ULONG ProcessInformationLength,
 	_Out_opt_ PULONG ReturnLength);
 
+extern "C" NTSTATUS NtQueryInformationThread(
+	HANDLE          ThreadHandle,
+	THREADINFOCLASS ThreadInformationClass,
+	PVOID           ThreadInformation,
+	ULONG           ThreadInformationLength,
+	PULONG          ReturnLength
+);
 
 extern "C" NTSTATUS WINAPI ZwQuerySystemInformation(
 	_In_      SYSTEM_INFORMATION_CLASS   SystemInformationClass,
