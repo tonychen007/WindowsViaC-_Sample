@@ -16,6 +16,7 @@ public:
 void TestExitThread(int flag);
 void TestBeginThread(int flag);
 void TestGetRealHandle();
+void TestAffinity();
 
 DWORD WINAPI TestExitThread(LPVOID args);
 unsigned TestBeginThread(void* args);
@@ -37,6 +38,9 @@ int main() {
 	printf("\n");
 	printf("Convert pseudoHandle to real handle\n");
 	TestGetRealHandle();
+
+	printf("\n");
+	TestAffinity();
 }
 
 void TestExitThread(int flag) {
@@ -96,4 +100,32 @@ void TestGetRealHandle() {
 
 	CloseHandle(realProcHandle);
 	CloseHandle(realThreadHandle);
+}
+
+void TestAffinity() {
+	DWORD_PTR procAffMask = 0;
+	DWORD_PTR systemAffMask = 0;
+	HANDLE hProc;
+	PROCESSOR_NUMBER cpuNum;
+	char buf1[256] = { 0 };
+	char buf2[256] = { 0 };
+
+	hProc = GetCurrentProcess();
+	GetProcessAffinityMask(hProc, &procAffMask, &systemAffMask);
+	_itoa_s(procAffMask, buf1, 2);
+	_itoa_s(systemAffMask, buf2, 2);
+	printf("ProcAffmask is: %s, SystemAffmask is: %s\n", buf1, buf2);
+
+	// run on cpu0 and cpu3, 0x05 = 101
+	memset(buf1, 0, sizeof(buf1));
+	memset(buf2, 0, sizeof(buf2));
+	SetProcessAffinityMask(hProc, 0x05);
+	GetProcessAffinityMask(hProc, &procAffMask, &systemAffMask);
+	_itoa_s(procAffMask, buf1, 2);
+	_itoa_s(systemAffMask, buf2, 2);
+	printf("ProcAffmask is: %s, SystemAffmask is: %s\n", buf1, buf2);
+
+	GetThreadIdealProcessorEx(GetCurrentThread(), &cpuNum);
+	printf("The ideal cpu for current thread is : %d\n", cpuNum.Number);
+	int a = 0;
 }
