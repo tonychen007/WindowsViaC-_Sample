@@ -158,7 +158,7 @@ void CThreadScheduleDlg::InitDropListControl() {
 	m_threadLastPri = procPri[2];
 
 	m_sleepEdit->SetLimitText(4);
-	m_sleepEdit->SetWindowText(L"1");
+	m_sleepEdit->SetWindowText(L"0");
 }
 
 void CThreadScheduleDlg::InitThread() {
@@ -166,7 +166,7 @@ void CThreadScheduleDlg::InitThread() {
 	int cpuCount;
 
 	GetSystemInfo(&systemInfo);
-	cpuCount = systemInfo.dwNumberOfProcessors;
+	cpuCount = systemInfo.dwNumberOfProcessors / 2;
 
 	for (int i = 0; i < cpuCount; i++) {
 		threadData *thData = new threadData();
@@ -203,12 +203,14 @@ DWORD WINAPI CThreadScheduleDlg::ThreadFunc(LPVOID args) {
 
 	while (1) {
 		// do somework
-		__m128i mma, mmb;
-		mma.m128i_u64[0] = 124;
-		mma.m128i_u64[1] = 64;
-		mmb.m128i_i64[0] = -1212;
-		mmb.m128i_i64[1] = 9696;
-		_mm_adds_epu16(mma, mmb);
+		if (idx % 2 == 0) {
+			__m128i mma, mmb;
+			mma.m128i_u64[0] = 124;
+			mma.m128i_u64[1] = 64;
+			mmb.m128i_i64[0] = -1212;
+			mmb.m128i_i64[1] = 9696;
+			_mm_adds_epu16(mma, mmb);
+		}
 
 		procList->GetItemText(idx, 0, buf, 256);
 		int val = _wtoi(buf);
@@ -233,11 +235,6 @@ void CThreadScheduleDlg::OnEnChangeSleepEdit() {
 	val = _wtoi(buf);
 	if (val > SLEEP_MAX) {
 		val = SLEEP_MAX;
-		_itow_s(val, buf, 10);
-		m_sleepEdit->SetWindowText(buf);
-	}
-	else if (val <= 0) {
-		val = 1;
 		_itow_s(val, buf, 10);
 		m_sleepEdit->SetWindowText(buf);
 	}
