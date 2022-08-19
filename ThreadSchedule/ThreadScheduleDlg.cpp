@@ -18,7 +18,13 @@
 // CThreadScheduleDlg 對話方塊
 
 
-HWND gDlgHWND;
+HWND				gDlgHWND;
+HANDLE				gEvent;
+HANDLE				gUIEvent;
+CRITICAL_SECTION	gCS;
+int					gIdx;
+int64_t				gVal;
+int					gSleep;
 
 CThreadScheduleDlg::CThreadScheduleDlg(CWnd* pParent /*=nullptr*/)
 	: CDialog(IDD_THREADSCHEDULE_DIALOG, pParent)
@@ -53,6 +59,9 @@ BOOL CThreadScheduleDlg::OnInitDialog()
 
 	// TODO: 在此加入額外的初始設定
 	gDlgHWND = GetSafeHwnd();
+	InitializeCriticalSection(&gCS);
+	gEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+	gUIEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 	InitDropListControl();
 	InitThread();
 
@@ -159,6 +168,7 @@ void CThreadScheduleDlg::InitDropListControl() {
 
 	m_sleepEdit->SetLimitText(4);
 	m_sleepEdit->SetWindowText(L"0");
+	gSleep = m_SleepTime = 0;
 }
 
 void CThreadScheduleDlg::InitThread() {
@@ -166,7 +176,7 @@ void CThreadScheduleDlg::InitThread() {
 	int cpuCount;
 
 	GetSystemInfo(&systemInfo);
-	cpuCount = systemInfo.dwNumberOfProcessors / 2;
+	cpuCount = systemInfo.dwNumberOfProcessors;
 
 	for (int i = 0; i < cpuCount; i++) {
 		threadData *thData = new threadData();
@@ -191,40 +201,9 @@ void CThreadScheduleDlg::InitThread() {
 
 		m_procList->InsertItem(&item);
 	}
-}
 
-// static
-DWORD WINAPI CThreadScheduleDlg::ThreadFunc(LPVOID args) {
-	threadData* thData = (threadData*)args;
-	int idx = thData->idx;
-	CListCtrl* procList = thData->m_procList;
-	TCHAR buf[256] = { 0 };
-	HWND eb = ::GetDlgItem(gDlgHWND, IDC_SLEEP_EDIT);
-
-	while (1) {
-		procList->GetItemText(idx, 0, buf, 256);
-		int val = _wtoi(buf);
-		val++;
-		_itow_s(val, buf, 10);
-		procList->SetItemText(idx, 0, buf);
-
-		::GetWindowText(eb, buf, 256);
-		val =_wtoi(buf);
-		Sleep(val);
-
-		// do somework
-		if (idx % 2 == 0) {
-			__m128i mma, mmb;
-			mma.m128i_u64[0] = 124;
-			mma.m128i_u64[1] = 64;
-			mmb.m128i_i64[0] = -1212;
-			mmb.m128i_i64[1] = 9696;
-			_mm_adds_epu16(mma, mmb);
-			Sleep(val * 2);
-		}
-	}
-
-	return 0;
+	// create a UI thread for updating, we do not need the handle
+	CreateThread(NULL, 0, ThreadUIFunc, m_procList, 0, 0);
 }
 
 void CThreadScheduleDlg::OnEnChangeSleepEdit() {
@@ -239,6 +218,9 @@ void CThreadScheduleDlg::OnEnChangeSleepEdit() {
 		_itow_s(val, buf, 10);
 		m_sleepEdit->SetWindowText(buf);
 	}
+
+	gSleep = m_SleepTime = val;
+	SetEvent(gEvent);
 }
 
 void CThreadScheduleDlg::OnCbnSelchangeProcPri() {
@@ -267,5 +249,48 @@ void CThreadScheduleDlg::OnCbnSelchangeThreadPri() {
 		SuspendThread(m_threadHandles[i]);
 		SetThreadPriority(m_threadHandles[i], data);
 		ResumeThread(m_threadHandles[i]);
+	}
+}
+
+// static
+DWORD WINAPI CThreadScheduleDlg::ThreadFunc(LPVOID args) {
+	DWORD dw, sl, val;
+	threadData* thData = (threadData*)args;
+	int idx = thData->idx;
+	CListCtrl* procList = thData->m_procList;
+
+	while (1) {
+		Sleep(gSleep);
+		EnterCriticalSection(&gCS);
+		gIdx = idx;
+		LeaveCriticalSection(&gCS);
+		SetEvent(gUIEvent);
+	}
+
+	return 0;
+}
+
+DWORD WINAPI CThreadScheduleDlg::ThreadUIFunc(LPVOID args) {
+	DWORD dw, val;
+	CListCtrl* procList = (CListCtrl*)args;
+	TCHAR buf[256] = { 0 };
+
+	while (1) {
+		dw = WaitForSingleObject(gUIEvent, 1);
+		switch (dw) {
+		case WAIT_OBJECT_0: {
+			EnterCriticalSection(&gCS);
+			procList->GetItemText(gIdx, 0, buf, 256);
+			val = _wtoi(buf);
+			val++;
+			_itow_s(val, buf, 10);
+			procList->SetItemText(gIdx, 0, buf);
+			LeaveCriticalSection(&gCS);
+			ResetEvent(gUIEvent);
+			break;
+		}
+		case WAIT_TIMEOUT:
+			break;
+		}
 	}
 }

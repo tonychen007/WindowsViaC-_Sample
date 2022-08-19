@@ -34,26 +34,28 @@ protected:
 	afx_msg HCURSOR OnQueryDragIcon();
 	void InitDropListControl();
 	void InitThread();
-	static DWORD WINAPI ThreadFunc(LPVOID args);
 	afx_msg void OnEnChangeSleepEdit();
 	afx_msg void OnCbnSelchangeProcPri();
 	afx_msg void OnCbnSelchangeThreadPri();
 
+	static DWORD WINAPI ThreadFunc(LPVOID args);
+	static DWORD WINAPI ThreadUIFunc(LPVOID args);
+
 	DECLARE_MESSAGE_MAP()
 
 private:
-	CComboBox* m_procBox;
-	CComboBox* m_threadBox;
-	CEdit* m_sleepEdit;
-	CListCtrl* m_procList;
-
-	int m_procLastPri;
-	int m_threadLastPri;
-
-	std::vector<HANDLE> m_threadHandles;
-
 	struct threadData {
 		int idx;
 		CListCtrl* m_procList;
 	};
+
+	CComboBox* m_procBox;
+	CComboBox* m_threadBox;
+	CEdit* m_sleepEdit;
+	CListCtrl* m_procList;
+	int m_procLastPri;
+	int m_threadLastPri;
+	std::vector<HANDLE> m_threadHandles;
+
+	int m_SleepTime;
 };
