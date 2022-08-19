@@ -202,16 +202,6 @@ DWORD WINAPI CThreadScheduleDlg::ThreadFunc(LPVOID args) {
 	HWND eb = ::GetDlgItem(gDlgHWND, IDC_SLEEP_EDIT);
 
 	while (1) {
-		// do somework
-		if (idx % 2 == 0) {
-			__m128i mma, mmb;
-			mma.m128i_u64[0] = 124;
-			mma.m128i_u64[1] = 64;
-			mmb.m128i_i64[0] = -1212;
-			mmb.m128i_i64[1] = 9696;
-			_mm_adds_epu16(mma, mmb);
-		}
-
 		procList->GetItemText(idx, 0, buf, 256);
 		int val = _wtoi(buf);
 		val++;
@@ -221,6 +211,17 @@ DWORD WINAPI CThreadScheduleDlg::ThreadFunc(LPVOID args) {
 		::GetWindowText(eb, buf, 256);
 		val =_wtoi(buf);
 		Sleep(val);
+
+		// do somework
+		if (idx % 2 == 0) {
+			__m128i mma, mmb;
+			mma.m128i_u64[0] = 124;
+			mma.m128i_u64[1] = 64;
+			mmb.m128i_i64[0] = -1212;
+			mmb.m128i_i64[1] = 9696;
+			_mm_adds_epu16(mma, mmb);
+			Sleep(val * 2);
+		}
 	}
 
 	return 0;
