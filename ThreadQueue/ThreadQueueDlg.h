@@ -41,6 +41,7 @@ protected:
 	template<class T> void AddListText(int ctrlID, PCTSTR pszFormat, ...);
 	static DWORD WINAPI ConsumeThread(LPVOID args);
 	static DWORD WINAPI ProducerThread(LPVOID args);
+	static DWORD WINAPI StopThread(LPVOID args);
 
 	DECLARE_MESSAGE_MAP()
 

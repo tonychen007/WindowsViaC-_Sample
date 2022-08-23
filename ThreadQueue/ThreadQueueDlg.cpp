@@ -97,7 +97,9 @@ void CThreadQueueDlg::OnBnClickedStop() {
 	m_start->EnableWindow(0);
 	m_stop->EnableWindow(0);
 
-	Clearup();
+	// create a new thread, or the UI will dead lock
+	HANDLE h = CreateThread(NULL, 0, StopThread, this, 0, 0);
+	CloseHandle(h);
 }
 
 void CThreadQueueDlg::OnBnClickedStart() {
@@ -135,16 +137,14 @@ void CThreadQueueDlg::Init() {
 }
 
 void CThreadQueueDlg::Clearup() {
-	if (m_IsShutDown)
-		return;
 
 	InterlockedExchange(&m_IsShutDown, TRUE);
 
 	WakeAllConditionVariable(&m_consumerCond);
 	WakeAllConditionVariable(&m_producerCond);
 
-	//WaitForMultipleObjects(_countof(m_hProducer), m_hProducer, TRUE, INFINITE);
-	//WaitForMultipleObjects(_countof(m_hConsumer), m_hConsumer, TRUE, INFINITE);
+	WaitForMultipleObjects(_countof(m_hConsumer), m_hConsumer, TRUE, INFINITE);
+	WaitForMultipleObjects(_countof(m_hProducer), m_hProducer, TRUE, INFINITE);
 
 	int cl = _countof(m_hConsumer);
 	for (int i = 0; i < cl; i++) {
@@ -183,7 +183,6 @@ DWORD CThreadQueueDlg::ConsumeThread(LPVOID args) {
 		if (pDlg->m_IsShutDown && pDlg->m_queue.size() == 0) {
 			ReleaseSRWLockExclusive(&pDlg->m_srwLck);
 			WakeAllConditionVariable(&pDlg->m_consumerCond);
-
 			pDlg->m_start->EnableWindow(1);
 			break;
 		}
@@ -248,3 +247,10 @@ DWORD CThreadQueueDlg::ProducerThread(LPVOID args) {
 	return 0;
 }
 
+DWORD CThreadQueueDlg::StopThread(LPVOID args) {
+	CThreadQueueDlg* pDlg = (CThreadQueueDlg*)args;
+
+	pDlg->Clearup();
+
+	return 0;
+}
