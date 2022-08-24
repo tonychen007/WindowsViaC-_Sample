@@ -1,13 +1,20 @@
 ﻿#include <Windows.h>
 #include <stdio.h>
+#include <wchar.h>
 #include <thread>
+
 using namespace std;
 
 void TestTwoThreadWaitObejct();
+void TestHandShake();
 
 int main() {
     printf("TestTwoThreadWaitObejct\n");
-    TestTwoThreadWaitObejct();
+    //TestTwoThreadWaitObejct();
+
+    printf("\n");
+    printf("TestHandShake\n");
+    TestHandShake();
 }
 
 void TestTwoThreadWaitObejct() {
@@ -44,3 +51,37 @@ void TestTwoThreadWaitObejct() {
     th3.join();
 }
 
+void TestHandShake() {
+    HANDLE hReqSubmitted, hReqReturned;
+    char buf[256];
+
+    hReqSubmitted = CreateEvent(NULL, FALSE, FALSE, NULL);
+    hReqReturned = CreateEvent(NULL, FALSE, FALSE, NULL);
+
+    thread clientTh = thread([&]() {
+        printf("Please enter the words:\n");
+        scanf_s("%[^\n]", buf, 256);
+        printf("\n");
+        SignalObjectAndWait(hReqSubmitted, hReqReturned, INFINITE, FALSE);
+        printf("[Client Thread]: The reversed words are: %s\n", buf);
+    });
+
+    thread serverTh = thread([&]() {
+        BOOL bIsShutdown = FALSE;
+
+        while (!bIsShutdown) {
+            WaitForSingleObject(hReqSubmitted, INFINITE);
+
+            printf("[Server thread]: Request has received\n");
+            _strrev(buf);
+            SetEvent(hReqReturned);
+            bIsShutdown = TRUE;
+        }
+    });
+
+    clientTh.join();
+    serverTh.join();
+
+    CloseHandle(hReqSubmitted);
+    CloseHandle(hReqReturned);
+}
