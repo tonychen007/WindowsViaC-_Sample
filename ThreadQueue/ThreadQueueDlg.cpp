@@ -94,7 +94,6 @@ HCURSOR CThreadQueueDlg::OnQueryDragIcon()
 }
 
 void CThreadQueueDlg::OnBnClickedStop() {
-	m_start->EnableWindow(0);
 	m_stop->EnableWindow(0);
 
 	// create a new thread, or the UI will dead lock
@@ -146,6 +145,8 @@ void CThreadQueueDlg::Clearup() {
 	WaitForMultipleObjects(_countof(m_hConsumer), m_hConsumer, TRUE, INFINITE);
 	WaitForMultipleObjects(_countof(m_hProducer), m_hProducer, TRUE, INFINITE);
 
+	m_start->EnableWindow(1);
+
 	int cl = _countof(m_hConsumer);
 	for (int i = 0; i < cl; i++) {
 		CloseHandle(m_hConsumer[i]);
@@ -183,7 +184,6 @@ DWORD CThreadQueueDlg::ConsumeThread(LPVOID args) {
 		if (pDlg->m_IsShutDown && pDlg->m_queue.size() == 0) {
 			ReleaseSRWLockExclusive(&pDlg->m_srwLck);
 			WakeAllConditionVariable(&pDlg->m_consumerCond);
-			pDlg->m_start->EnableWindow(1);
 			break;
 		}
 		else {
