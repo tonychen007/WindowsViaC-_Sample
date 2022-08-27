@@ -105,6 +105,9 @@ void CKernelQueueDlg::OnBnClickedStart() {
 	m_producerList->ResetContent();
 	m_queue.swap(std::queue<int>());
 
+	m_hMutex = CreateMutex(NULL, FALSE, NULL);
+	m_hSema = CreateSemaphore(NULL, 0, MAX_COUNT, NULL);
+
 	int cl = _countof(m_hConsumer);
 	for (int i = 0; i < cl; i++) {
 		m_hConsumer[i] = CreateThread(NULL, 0, ConsumeThread, this, 0, 0);
@@ -124,9 +127,6 @@ void CKernelQueueDlg::Init() {
 	m_start = (CButton*)GetDlgItem(IDC_START);
 	m_stop = (CButton*)GetDlgItem(IDC_STOP);
 	m_stop->EnableWindow(0);
-
-	m_hMutex = CreateMutex(NULL, FALSE, NULL);
-	m_hSema = CreateSemaphore(NULL, 0, MAX_COUNT, NULL);
 }
 
 void CKernelQueueDlg::Clearup() {
@@ -135,8 +135,6 @@ void CKernelQueueDlg::Clearup() {
 
 	WaitForMultipleObjects(_countof(m_hConsumer), m_hConsumer, TRUE, INFINITE);
 	WaitForMultipleObjects(_countof(m_hProducer), m_hProducer, TRUE, INFINITE);
-
-	m_start->EnableWindow(1);
 
 	int cl = _countof(m_hConsumer);
 	for (int i = 0; i < cl; i++) {
@@ -148,8 +146,10 @@ void CKernelQueueDlg::Clearup() {
 		CloseHandle(m_hProducer[i]);
 	}
 
-	//CloseHandle(m_hMutex);
-	//CloseHandle(m_hSema);
+	m_start->EnableWindow(1);
+
+	CloseHandle(m_hMutex);
+	CloseHandle(m_hSema);
 }
 
 template<class T>
@@ -191,7 +191,7 @@ DWORD CKernelQueueDlg::ConsumeThread(LPVOID args) {
 			}
 
 			ReleaseMutex(pDlg->m_hMutex);
-			pDlg->m_IsShutDown ? Sleep(10) : Sleep(800);
+			pDlg->m_IsShutDown ? Sleep(10) : Sleep(300);
 		}
 	}
 
@@ -208,6 +208,8 @@ DWORD CKernelQueueDlg::ProducerThread(LPVOID args) {
 		WaitForSingleObject(pDlg->m_hMutex, INFINITE);;
 
 		if (pDlg->m_IsShutDown && pDlg->m_queue.size() == 0) {
+			// consumer thread is wait for both mutex and sema
+			ReleaseSemaphore(pDlg->m_hSema, 1, NULL);
 			ReleaseMutex(pDlg->m_hMutex);
 			break;
 		}
@@ -223,7 +225,7 @@ DWORD CKernelQueueDlg::ProducerThread(LPVOID args) {
 
 			ReleaseSemaphore(pDlg->m_hSema, 1, NULL);
 			ReleaseMutex(pDlg->m_hMutex);
-			pDlg->m_IsShutDown ? Sleep(100) : Sleep(500);
+			pDlg->m_IsShutDown ? Sleep(10) : Sleep(200);
 		}
 	}
 
