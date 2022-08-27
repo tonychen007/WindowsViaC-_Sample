@@ -8,7 +8,7 @@ using namespace std;
 void TestTwoThreadWaitObejct();
 void TestHandShake();
 void TestWaitableTimer(bool isOneShot, PTIMERAPCROUTINE pCallBack = NULL, LPVOID pCallBackArgs = NULL);
-void TestTimerApcQueue();
+void TestSemaphore();
 
 VOID APIENTRY TimerApcCallBack(PVOID pvArgToCompletionRoutine, DWORD dwTimerLowValue, DWORD dwTimerHighValue);
 
@@ -18,19 +18,23 @@ int main() {
 
     printf("\n");
     printf("TestHandShake\n");
-    TestHandShake();
+    //TestHandShake();
 
     printf("\n");
     printf("TestWaitableTimer\n");
-    TestWaitableTimer(FALSE);
+    //TestWaitableTimer(FALSE);
 
     printf("\n");
     printf("TestOneShotTimer\n");
-    TestWaitableTimer(TRUE);
+    //TestWaitableTimer(TRUE);
 
     printf("\n");
     printf("TestTimerApcCallback\n");
-    TestWaitableTimer(TRUE, TimerApcCallBack);
+    //TestWaitableTimer(TRUE, TimerApcCallBack);
+
+    printf("\n");
+    printf("TestSemaphore\n");
+    TestSemaphore();
 }
 
 void TestTwoThreadWaitObejct() {
@@ -136,6 +140,36 @@ void TestWaitableTimer(bool isOneShot, PTIMERAPCROUTINE pCallBack, LPVOID pCallB
     }
 
     CloseHandle(hTimer);
+}
+
+void TestSemaphore() {
+    HANDLE h;
+    int idx = 0;
+    int times = 5;
+    int semaCnt = 5;
+
+    h = CreateSemaphore(NULL, 0, semaCnt, NULL);
+
+    thread th1 = thread([&]() {
+        while (1) {
+            WaitForSingleObject(h, INFINITE);
+            printf("sema wake up every 100 mills\n");
+            Sleep(100);
+
+            if (idx >= times)
+                break;
+        }
+    });
+
+    while (idx < times) {
+        printf("Rlease 5 sema every 1 seconds\n");
+        Sleep(1000);
+        ReleaseSemaphore(h, 5, NULL);
+        idx++;
+    }
+
+    th1.join();
+    CloseHandle(h);
 }
 
 VOID APIENTRY TimerApcCallBack(PVOID pvArgToCompletionRoutine, DWORD dwTimerLowValue, DWORD dwTimerHighValue) {
