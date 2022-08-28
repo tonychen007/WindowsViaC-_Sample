@@ -48,6 +48,8 @@ private:
 	std::queue<int> m_queue;
 	HANDLE m_hMutex;
 	HANDLE m_hSema;
+	HANDLE m_hNotFull;
+	HANDLE m_hNotEmpty;
 
 	HANDLE m_hConsumer[2];
 	HANDLE m_hProducer[4];
