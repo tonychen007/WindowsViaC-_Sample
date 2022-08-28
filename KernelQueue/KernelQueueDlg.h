@@ -6,7 +6,7 @@
 
 #include <queue>
 
-#define MAX_COUNT 5
+#define MAX_COUNT 50
 
 // CKernelQueueDlg 對話方塊
 class CKernelQueueDlg : public CDialogEx
@@ -48,8 +48,6 @@ private:
 	std::queue<int> m_queue;
 	HANDLE m_hMutex;
 	HANDLE m_hSema;
-	HANDLE m_hNotFull;
-	HANDLE m_hNotEmpty;
 
 	HANDLE m_hConsumer[2];
 	HANDLE m_hProducer[4];

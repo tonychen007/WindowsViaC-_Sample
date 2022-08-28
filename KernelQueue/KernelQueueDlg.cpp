@@ -107,8 +107,6 @@ void CKernelQueueDlg::OnBnClickedStart() {
 
 	m_hMutex = CreateMutex(NULL, FALSE, NULL);
 	m_hSema = CreateSemaphore(NULL, 0, MAX_COUNT, NULL);
-	m_hNotFull = CreateEvent(NULL, FALSE, FALSE, NULL);
-	m_hNotEmpty = CreateEvent(NULL, FALSE, FALSE, NULL);
 
 	int cl = _countof(m_hConsumer);
 	for (int i = 0; i < cl; i++) {
@@ -135,18 +133,16 @@ void CKernelQueueDlg::Clearup() {
 
 	InterlockedExchange(&m_IsShutDown, TRUE);
 
-	ReleaseMutex(m_hMutex);
-	ReleaseSemaphore(m_hSema,1,NULL);
+	int cl = _countof(m_hConsumer);
+	int pl = _countof(m_hProducer);
 
 	WaitForMultipleObjects(_countof(m_hConsumer), m_hConsumer, TRUE, INFINITE);
 	WaitForMultipleObjects(_countof(m_hProducer), m_hProducer, TRUE, INFINITE);
 
-	int cl = _countof(m_hConsumer);
 	for (int i = 0; i < cl; i++) {
 		CloseHandle(m_hConsumer[i]);
 	}
 
-	int pl = _countof(m_hProducer);
 	for (int i = 0; i < pl; i++) {
 		CloseHandle(m_hProducer[i]);
 	}
@@ -155,8 +151,6 @@ void CKernelQueueDlg::Clearup() {
 
 	CloseHandle(m_hMutex);
 	CloseHandle(m_hSema);
-	CloseHandle(m_hNotFull);
-	CloseHandle(m_hNotEmpty);
 }
 
 template<class T>
@@ -180,12 +174,6 @@ DWORD CKernelQueueDlg::ConsumeThread(LPVOID args) {
 
 		WaitForMultipleObjects(_countof(hArr), hArr, TRUE, INFINITE);
 
-		while (pDlg->m_queue.size() == 0 && !pDlg->m_IsShutDown) {
-			ReleaseMutex(pDlg->m_hMutex);
-			WaitForSingleObject(pDlg->m_hNotEmpty, INFINITE);
-			break;
-		}
-
 		if (pDlg->m_IsShutDown && pDlg->m_queue.size() == 0) {
 			ReleaseMutex(pDlg->m_hMutex);
 			break;
@@ -195,7 +183,6 @@ DWORD CKernelQueueDlg::ConsumeThread(LPVOID args) {
 				pDlg->m_queue.pop();
 				int v = pDlg->m_queue.size();
 				pDlg->AddListText<CListBox>(IDC_CONSUMER_LIST, L"The queue size is: %d", v);
-				SetEvent(pDlg->m_hNotFull);
 			}
 			else {
 				pDlg->AddListText<CListBox>(IDC_CONSUMER_LIST, L"%s", L"Processing remaining elements...");
@@ -205,7 +192,7 @@ DWORD CKernelQueueDlg::ConsumeThread(LPVOID args) {
 			}
 
 			ReleaseMutex(pDlg->m_hMutex);
-			pDlg->m_IsShutDown ? Sleep(10) : Sleep(300);
+			pDlg->m_IsShutDown ? Sleep(10) : Sleep(500);
 		}
 	}
 
@@ -219,16 +206,7 @@ DWORD CKernelQueueDlg::ProducerThread(LPVOID args) {
 
 	while (1) {
 
-		WaitForSingleObject(pDlg->m_hMutex, INFINITE);;
-
-		while (pDlg->m_queue.size() == MAX_COUNT && !pDlg->m_IsShutDown) {
-			int n = pDlg->m_producerList->AddString(L"Queue is full...");
-			pDlg->m_producerList->SetCurSel(n);
-			ReleaseSemaphore(pDlg->m_hSema, 1, NULL);
-			ReleaseMutex(pDlg->m_hMutex);
-			WaitForSingleObject(pDlg->m_hNotFull, INFINITE);
-			break;
-		}
+		WaitForSingleObject(pDlg->m_hMutex, INFINITE);
 
 		if (pDlg->m_IsShutDown && pDlg->m_queue.size() == 0) {
 			// consumer thread is wait for both mutex and sema
@@ -244,7 +222,6 @@ DWORD CKernelQueueDlg::ProducerThread(LPVOID args) {
 				_itow_s(v, buf, 10);
 				int n = pDlg->m_producerList->AddString(buf);
 				pDlg->m_producerList->SetCurSel(n);
-				SetEvent(pDlg->m_hNotEmpty);
 			}
 
 			ReleaseSemaphore(pDlg->m_hSema, 1, NULL);
