@@ -7,6 +7,9 @@
 #include "KernelQueueDlg.h"
 #include "afxdialogex.h"
 
+#include <wct.h>
+#include "Toolhelp.h"
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -14,12 +17,18 @@
 
 // CKernelQueueDlg 對話方塊
 
-
+#define GET_REAL_PROC_HANDLE(h) { \
+	HANDLE hP = GetCurrentProcess(); \
+	DuplicateHandle(hP, hP, hP, &h, 0, FALSE, DUPLICATE_SAME_ACCESS); }
 
 CKernelQueueDlg::CKernelQueueDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_KERNELQUEUE_DIALOG, pParent)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+}
+
+CKernelQueueDlg::~CKernelQueueDlg() {
+	CloseThreadWaitChainSession(m_hWTCSession);
 }
 
 void CKernelQueueDlg::DoDataExchange(CDataExchange* pDX)
@@ -32,6 +41,8 @@ BEGIN_MESSAGE_MAP(CKernelQueueDlg, CDialogEx)
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_STOP, &CKernelQueueDlg::OnBnClickedStop)
 	ON_BN_CLICKED(IDC_START, &CKernelQueueDlg::OnBnClickedStart)
+	ON_BN_CLICKED(IDC_CLEAR_DEADLOCK, &CKernelQueueDlg::OnBnClickedClearDeadlock)
+	ON_BN_CLICKED(IDC_UPDATE_DEADLOCK, &CKernelQueueDlg::OnBnClickedUpdateDeadlock)
 END_MESSAGE_MAP()
 
 
@@ -48,6 +59,8 @@ BOOL CKernelQueueDlg::OnInitDialog()
 
 	// TODO: 在此加入額外的初始設定
 	Init();
+	InitWaitChain();
+	ParseThread();
 
 	return TRUE;  // 傳回 TRUE，除非您對控制項設定焦點
 }
@@ -88,14 +101,6 @@ HCURSOR CKernelQueueDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
-void CKernelQueueDlg::OnBnClickedStop() {
-	m_stop->EnableWindow(0);
-
-	// create a new thread, or the UI will dead lock
-	HANDLE h = CreateThread(NULL, 0, StopThread, this, 0, 0);
-	CloseHandle(h);
-}
-
 void CKernelQueueDlg::OnBnClickedStart() {
 	m_start->EnableWindow(0);
 	m_stop->EnableWindow();
@@ -119,6 +124,18 @@ void CKernelQueueDlg::OnBnClickedStart() {
 	}
 }
 
+void CKernelQueueDlg::OnBnClickedStop() {
+	m_stop->EnableWindow(0);
+
+	// create a new thread, or the UI will dead lock
+	HANDLE h = CreateThread(NULL, 0, StopThread, this, 0, 0);
+	CloseHandle(h);
+}
+
+void CKernelQueueDlg::OnBnClickedClearDeadlock() {
+	m_deadLockList->ResetContent();
+}
+
 void CKernelQueueDlg::Init() {
 	m_IsShutDown = FALSE;
 
@@ -127,6 +144,7 @@ void CKernelQueueDlg::Init() {
 	m_start = (CButton*)GetDlgItem(IDC_START);
 	m_stop = (CButton*)GetDlgItem(IDC_STOP);
 	m_stop->EnableWindow(0);
+	m_deadLockList = (CListBox*)GetDlgItem(IDC_DEADLOCK_LIST);
 }
 
 void CKernelQueueDlg::Clearup() {
@@ -153,7 +171,7 @@ void CKernelQueueDlg::Clearup() {
 	CloseHandle(m_hSema);
 }
 
-template<class T>
+template<class T, int AUTOSCROLL>
 void CKernelQueueDlg::AddListText(int ctrlID, PCTSTR pszFormat, ...) {
 	T* wnd = (T*)GetDlgItem(ctrlID);
 	TCHAR buf[256] = { 0 };
@@ -163,7 +181,10 @@ void CKernelQueueDlg::AddListText(int ctrlID, PCTSTR pszFormat, ...) {
 	wvsprintf(buf, pszFormat, args);
 	int n = wnd->AddString(buf);
 	va_end(args);
-	wnd->SetCurSel(n);
+
+	if (AUTOSCROLL) {
+		wnd->SetCurSel(n);
+	}
 }
 
 DWORD CKernelQueueDlg::ConsumeThread(LPVOID args) {
@@ -237,6 +258,243 @@ DWORD CKernelQueueDlg::StopThread(LPVOID args) {
 	CKernelQueueDlg* pDlg = (CKernelQueueDlg*)args;
 
 	pDlg->Clearup();
+
+	return 0;
+}
+
+
+// WaitChain
+void CKernelQueueDlg::InitWaitChain() {
+	PCOGETCALLSTATE       CallStateCallback;
+	PCOGETACTIVATIONSTATE ActivationStateCallback;
+
+	// Load OLE32.DLL into the process to be able to get the address 
+	// of the two COM functions required by RegisterWaitChainCOMCallback
+	HMODULE hOLE32DLL = LoadLibrary(TEXT("OLE32.DLL"));
+
+	CallStateCallback = (PCOGETCALLSTATE)
+		GetProcAddress(hOLE32DLL, "CoGetCallState");
+	ActivationStateCallback = (PCOGETACTIVATIONSTATE)
+		GetProcAddress(hOLE32DLL, "CoGetActivationState");
+
+	// Pass these COM helper functions to WCT
+	RegisterWaitChainCOMCallback(CallStateCallback, ActivationStateCallback);
+
+	m_hWTCSession = OpenThreadWaitChainSession(0, NULL);
+
+	m_hTimer = CreateWaitableTimer(NULL, FALSE, NULL);
+	LARGE_INTEGER li;
+	const int nanoseconds = 1000 * 1000 * 1000LL / 100LL;
+	const int64_t timeOff = 0;
+	li.QuadPart = -timeOff * nanoseconds;
+	const int timeIntv = 1000;
+
+	SetWaitableTimer(m_hTimer, &li, timeIntv, NULL, NULL, FALSE);
+}
+
+void CKernelQueueDlg::ParseThread() {
+	HANDLE hPid;
+
+	GET_REAL_PROC_HANDLE(hPid);
+
+	m_dwPid = GetProcessId(hPid);
+	CToolhelp th(TH32CS_SNAPTHREAD, m_dwPid);
+	THREADENTRY32 te = { sizeof(te) };
+	BOOL fOk = th.ThreadFirst(&te);
+
+	for (; fOk; fOk = th.ThreadNext(&te)) {
+		// Only parse threads of the given process
+		if (te.th32OwnerProcessID == m_dwPid) {
+			ParseThread0(te.th32ThreadID);
+		}
+	}
+}
+
+void CKernelQueueDlg::ParseThread0(DWORD tid) {
+	WAITCHAIN_NODE_INFO  chain[WCT_MAX_NODE_COUNT];
+	DWORD dwNodesInChain = WCT_MAX_NODE_COUNT;
+	DWORD dwNodeCount = 0;
+	BOOL bDeadlock;
+	TCHAR buf[MAX_PATH] = { 0 };
+
+	// Get the chain for the current thread
+	if (!GetThreadWaitChain(m_hWTCSession, NULL, WCTP_GETINFO_ALL_FLAGS, tid, &dwNodesInChain, chain, &bDeadlock)) {
+		OnThread(tid, FALSE, 0);
+		return;
+	}
+	else {
+		dwNodeCount = dwNodesInChain;
+		OnThread(tid, bDeadlock, dwNodesInChain);
+		/*
+		wsprintf(buf, L"Thread id : %d\n", tid);
+		OutputDebugString(buf);
+		*/
+		for (int i = 0; i < dwNodeCount; i++) {
+			OnChainNodeInfo(tid, i, chain[i]);
+		}
+	}
+}
+
+void CKernelQueueDlg::OnThread(DWORD tid, BOOL bDeadlock, DWORD nodeCount) {
+	if (nodeCount == 0) {
+		AddListText<CListBox, 0>(IDC_DEADLOCK_LIST, L"Thread %4u - Error: %d", tid, GetLastError());
+	}
+	else {
+		AddListText<CListBox, 0>(IDC_DEADLOCK_LIST, L"Thread %4u %s", tid, bDeadlock ? L" is in a blcoked" : L"");
+	}
+}
+
+void CKernelQueueDlg::OnChainNodeInfo(DWORD rootTID, DWORD currentNode, WAITCHAIN_NODE_INFO nodeInfo) {
+	if (currentNode == 0)
+		AddListText<CListBox, 0>(IDC_DEADLOCK_LIST, L"------------------------------");
+
+	if (nodeInfo.ObjectType == WctThreadType) {
+		// Show if the thread is from another process
+		if (m_dwPid != nodeInfo.ThreadObject.ProcessId) {
+			AddListText<CListBox, 0>(IDC_DEADLOCK_LIST,TEXT("    [%u:%u -> %s] "),
+				nodeInfo.ThreadObject.ProcessId,
+				nodeInfo.ThreadObject.ThreadId,
+				GetWCTObjectStatus(nodeInfo.ObjectStatus));
+		}
+		else {  // Otherwise, just show the thread ID
+			AddListText<CListBox, 0>(IDC_DEADLOCK_LIST, TEXT("    [%u -> %s] "),
+				nodeInfo.ThreadObject.ThreadId,
+				GetWCTObjectStatus(nodeInfo.ObjectStatus));
+		}
+	}
+	else {
+		if (nodeInfo.LockObject.ObjectName[0] != L'\0') {
+			AddListText<CListBox, 0>(IDC_DEADLOCK_LIST, TEXT("%s - %s  (%s)"),
+				GetWCTObjectType(nodeInfo.ObjectType),
+				nodeInfo.LockObject.ObjectName,
+				GetWCTObjectStatus(nodeInfo.ObjectStatus));
+		}
+		else {
+			AddListText<CListBox, 0>(IDC_DEADLOCK_LIST, TEXT("%s  (%s)"),
+				GetWCTObjectType(nodeInfo.ObjectType),
+				GetWCTObjectStatus(nodeInfo.ObjectStatus));
+		}
+	}
+}
+
+LPCTSTR CKernelQueueDlg::GetWCTObjectStatus(WCT_OBJECT_STATUS objectStatus) {
+	switch (objectStatus) {
+	case WctStatusNoAccess:  // ACCESS_DENIED for this object
+		return(TEXT("AccessDenied"));
+		break;
+
+	case WctStatusRunning:  // Thread status
+		return(TEXT("Running"));
+		break;
+
+	case WctStatusBlocked:  // Thread status
+		return(TEXT("Blocked"));
+		break;
+
+	case WctStatusPidOnly:  // Thread status
+		return(TEXT("PidOnly"));
+		break;
+
+	case WctStatusPidOnlyRpcss:   // Thread status
+		return(TEXT("PidOnlyRpcss"));
+		break;
+
+	case WctStatusOwned:  // Dispatcher object status
+		return(TEXT("Owned"));
+		break;
+
+	case WctStatusNotOwned:  // Dispatcher object status
+		return(TEXT("NotOwned"));
+		break;
+
+	case WctStatusAbandoned:  // Dispatcher object status
+		return(TEXT("Abandoned"));
+		break;
+
+	case WctStatusUnknown:  // All objects
+		return(TEXT("Unknown"));
+		break;
+
+	case WctStatusError:  // All objects
+		return(TEXT("Error"));
+		break;
+
+	case WctStatusMax:
+		return(TEXT("?max?"));
+		break;
+
+	default:
+		return(TEXT("???"));
+		break;
+	}
+}
+
+LPCTSTR CKernelQueueDlg::GetWCTObjectType(WCT_OBJECT_TYPE objectType) {
+	switch (objectType) {
+	case WctCriticalSectionType:
+		return(TEXT("CriticalSection"));
+		break;
+
+	case WctSendMessageType:
+		return(TEXT("SendMessage"));
+		break;
+
+	case WctMutexType:
+		return(TEXT("Mutex"));
+		break;
+
+	case WctAlpcType:
+		return(TEXT("Alpc"));
+		break;
+
+	case WctComType:
+		return(TEXT("COM"));
+		break;
+
+	case WctThreadWaitType:
+		return(TEXT("ThreadWait"));
+		break;
+
+	case WctProcessWaitType:
+		return(TEXT("ProcessWait"));
+		break;
+
+	case WctThreadType:
+		return(TEXT("Thread"));
+		break;
+
+	case WctComActivationType:
+		return(TEXT("COMActivation"));
+		break;
+
+	case WctUnknownType:
+		return(TEXT("Unknown"));
+		break;
+
+	default:
+		return(TEXT("???"));
+		break;
+	}
+}
+
+void CKernelQueueDlg::OnBnClickedUpdateDeadlock() {
+	LARGE_INTEGER li;
+	HANDLE h;
+
+	//h = CreateThread(NULL, 0, MonitorDeadLockThread, this, 0, 0);
+	//CloseHandle(h);
+	OnBnClickedClearDeadlock();
+	ParseThread();
+}
+
+DWORD WINAPI CKernelQueueDlg::MonitorDeadLockThread(LPVOID args) {
+	CKernelQueueDlg* pDlg = (CKernelQueueDlg*)args;
+
+	//while (1) {
+		//WaitForSingleObject(pDlg->m_hTimer, INFINITE);
+		pDlg->OnBnClickedClearDeadlock();
+		pDlg->ParseThread();
+	//}
 
 	return 0;
 }

@@ -11,6 +11,7 @@ void TestWaitableTimer(bool isOneShot, PTIMERAPCROUTINE pCallBack = NULL, LPVOID
 void TestSemaphore();
 void TestMutex();
 void TestMutexWaitAgain();
+void TestMsgWaitforObject();
 
 VOID APIENTRY TimerApcCallBack(PVOID pvArgToCompletionRoutine, DWORD dwTimerLowValue, DWORD dwTimerHighValue);
 
@@ -44,7 +45,11 @@ int main() {
 
     printf("\n");
     printf("TestMutexWaitAgain\n");
-    TestMutexWaitAgain();
+    //TestMutexWaitAgain();
+
+    printf("\n");
+    printf("TestMsgWaitforObject\n");
+    TestMsgWaitforObject();
 }
 
 void TestTwoThreadWaitObejct() {
@@ -192,7 +197,7 @@ void TestMutex() {
         while (gi < 99) {
             WaitForSingleObject(h, 1000);
             gi++;
-            printf("[Thread %d]:gi is %d\n", th1.get_id(), gi);
+            printf("[Thread %ud]:gi is %d\n", th1.get_id(), gi);
             Sleep(10);
             ReleaseMutex(h);
         }
@@ -202,7 +207,7 @@ void TestMutex() {
         while (gi < 99) {
             WaitForSingleObject(h, 1000);
             gi++;
-            printf("[Thread %d]:gi is %d\n", th2.get_id(), gi);
+            printf("[Thread %ud]:gi is %d\n", th2.get_id(), gi);
             Sleep(20);
             ReleaseMutex(h);
         }
@@ -223,14 +228,14 @@ void TestMutexWaitAgain() {
 
     thread th1 = thread([&]() {
         WaitForSingleObject(hEvent, INFINITE);
-        printf("[Thread % d] After acquiring second mutex, event is set\n", th1.get_id());
-        printf("[Thread % d] But only release mutex once\n", th1.get_id());
+        printf("[Thread %ud] After acquiring second mutex, event is set\n", th1.get_id());
+        printf("[Thread %ud] But only release mutex once\n", th1.get_id());
         WaitForSingleObject(hMutex, 1000);
-        printf("[Thread % d] Wait for mutex time out. The mutex should be released twice\n", th1.get_id());
+        printf("[Thread %ud] Wait for mutex time out. The mutex should be released twice\n", th1.get_id());
 
         WaitForSingleObject(hEvent, INFINITE);
         WaitForSingleObject(hMutex, INFINITE);
-        printf("[Thread % d] After release twice mutex, I am awake\n", th1.get_id());
+        printf("[Thread %ud] After release twice mutex, I am awake\n", th1.get_id());
         ResetEvent(hEvent);
         SetEvent(hEvent);
     });
@@ -239,16 +244,16 @@ void TestMutexWaitAgain() {
         while (1) {
             dwSt = WaitForSingleObject(hMutex, INFINITE);
             if (dwSt == WAIT_OBJECT_0) {
-                printf("[Thread % d] Acquire first mutex, try to wait again\n", th2.get_id());
+                printf("[Thread %ud] Acquire first mutex, try to wait again\n", th2.get_id());
                 dwSt = WaitForSingleObject(hMutex, INFINITE);
                 if (dwSt == WAIT_OBJECT_0) {
-                    printf("[Thread % d] Acquire second mutex\n", th2.get_id());
+                    printf("[Thread %ud] Acquire second mutex\n", th2.get_id());
                     ReleaseMutex(hMutex);
                     SetEvent(hEvent);
 
                     Sleep(2000);
                     ResetEvent(hEvent);
-                    printf("[Thread % d] Release mutex once twice\n", th2.get_id());
+                    printf("[Thread %ud] Release mutex once twice\n", th2.get_id());
                     ReleaseMutex(hMutex);
                     SetEvent(hEvent);
                     Sleep(2000);
@@ -261,6 +266,21 @@ void TestMutexWaitAgain() {
 
     th1.join();
     th2.join();
+}
+
+void TestMsgWaitforObject() {
+    HANDLE he = CreateEvent(NULL, TRUE, FALSE, NULL);
+
+    thread th1 = thread([&] {
+        MsgWaitForMultipleObjects(1, &he, FALSE, INFINITE, QS_ALLEVENTS);
+        printf("[Thread %ud] Set event after 3 seconds\n", th1.get_id());
+    });
+
+    printf("Set event after 3 seconds\n");
+    Sleep(3000);
+    SetEvent(he);
+
+    th1.join();
 }
 
 VOID APIENTRY TimerApcCallBack(PVOID pvArgToCompletionRoutine, DWORD dwTimerLowValue, DWORD dwTimerHighValue) {
