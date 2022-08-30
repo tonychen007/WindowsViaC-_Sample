@@ -281,15 +281,6 @@ void CKernelQueueDlg::InitWaitChain() {
 	RegisterWaitChainCOMCallback(CallStateCallback, ActivationStateCallback);
 
 	m_hWTCSession = OpenThreadWaitChainSession(0, NULL);
-
-	m_hTimer = CreateWaitableTimer(NULL, FALSE, NULL);
-	LARGE_INTEGER li;
-	const int nanoseconds = 1000 * 1000 * 1000LL / 100LL;
-	const int64_t timeOff = 0;
-	li.QuadPart = -timeOff * nanoseconds;
-	const int timeIntv = 1000;
-
-	SetWaitableTimer(m_hTimer, &li, timeIntv, NULL, NULL, FALSE);
 }
 
 void CKernelQueueDlg::ParseThread() {
@@ -351,15 +342,17 @@ void CKernelQueueDlg::OnChainNodeInfo(DWORD rootTID, DWORD currentNode, WAITCHAI
 	if (nodeInfo.ObjectType == WctThreadType) {
 		// Show if the thread is from another process
 		if (m_dwPid != nodeInfo.ThreadObject.ProcessId) {
-			AddListText<CListBox, 0>(IDC_DEADLOCK_LIST,TEXT("    [%u:%u -> %s] "),
+			AddListText<CListBox, 0>(IDC_DEADLOCK_LIST,TEXT("    [%u:%u -> %s]"),
 				nodeInfo.ThreadObject.ProcessId,
 				nodeInfo.ThreadObject.ThreadId,
 				GetWCTObjectStatus(nodeInfo.ObjectStatus));
+			AddListText<CListBox, 0>(IDC_DEADLOCK_LIST, L"");
 		}
 		else {  // Otherwise, just show the thread ID
-			AddListText<CListBox, 0>(IDC_DEADLOCK_LIST, TEXT("    [%u -> %s] "),
+			AddListText<CListBox, 0>(IDC_DEADLOCK_LIST, TEXT("    [%u -> %s]"),
 				nodeInfo.ThreadObject.ThreadId,
 				GetWCTObjectStatus(nodeInfo.ObjectStatus));
+			AddListText<CListBox, 0>(IDC_DEADLOCK_LIST, L"");
 		}
 	}
 	else {
@@ -368,11 +361,13 @@ void CKernelQueueDlg::OnChainNodeInfo(DWORD rootTID, DWORD currentNode, WAITCHAI
 				GetWCTObjectType(nodeInfo.ObjectType),
 				nodeInfo.LockObject.ObjectName,
 				GetWCTObjectStatus(nodeInfo.ObjectStatus));
+			AddListText<CListBox, 0>(IDC_DEADLOCK_LIST, L"");
 		}
 		else {
 			AddListText<CListBox, 0>(IDC_DEADLOCK_LIST, TEXT("%s  (%s)"),
 				GetWCTObjectType(nodeInfo.ObjectType),
 				GetWCTObjectStatus(nodeInfo.ObjectStatus));
+			AddListText<CListBox, 0>(IDC_DEADLOCK_LIST, L"");
 		}
 	}
 }
@@ -481,8 +476,6 @@ void CKernelQueueDlg::OnBnClickedUpdateDeadlock() {
 	LARGE_INTEGER li;
 	HANDLE h;
 
-	//h = CreateThread(NULL, 0, MonitorDeadLockThread, this, 0, 0);
-	//CloseHandle(h);
 	OnBnClickedClearDeadlock();
 	ParseThread();
 }
@@ -490,11 +483,8 @@ void CKernelQueueDlg::OnBnClickedUpdateDeadlock() {
 DWORD WINAPI CKernelQueueDlg::MonitorDeadLockThread(LPVOID args) {
 	CKernelQueueDlg* pDlg = (CKernelQueueDlg*)args;
 
-	//while (1) {
-		//WaitForSingleObject(pDlg->m_hTimer, INFINITE);
-		pDlg->OnBnClickedClearDeadlock();
-		pDlg->ParseThread();
-	//}
+	pDlg->OnBnClickedClearDeadlock();
+	pDlg->ParseThread();
 
 	return 0;
 }

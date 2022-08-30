@@ -75,5 +75,4 @@ private:
 
 	DWORD m_dwPid;
 	HANDLE m_hWTCSession;
-	HANDLE m_hTimer;
 };
