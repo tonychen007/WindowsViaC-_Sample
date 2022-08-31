@@ -130,4 +130,6 @@ void TestSetEndFile() {
     GetFileInformationByHandle(hFile, &fInfo);
     printf("After setFileEnd truncate to 2K. The size is %d\n", fInfo.nFileSizeLow);
     CloseHandle(hFile);
+
+    DeleteFile(pszFilename);
 }
