@@ -7,6 +7,8 @@ void TestCreateFile(bool withBuffer = 0);
 void TestCloseOnDelete();
 void DumpFileinCurrDir();
 void TestSetEndFile();
+void TestWriteFileOverlapped();
+void TestMutipleFileOverlapped();
 
 int main() {
     printf("TestCreateFileWithNoBuffer\n");
@@ -23,6 +25,14 @@ int main() {
     printf("\n");
     printf("TestSetEndFile\n");
     TestSetEndFile();
+
+    printf("\n");
+    printf("TestWriteFileOverlapped\n");
+    TestWriteFileOverlapped();
+
+    printf("\n");
+    printf("TestMutipleFileOverlapped\n");
+    TestMutipleFileOverlapped();
 }
 
 void TestCreateFile(bool withBuffer) {
@@ -132,4 +142,43 @@ void TestSetEndFile() {
     CloseHandle(hFile);
 
     DeleteFile(pszFilename);
+}
+
+void TestWriteFileOverlapped() {
+    OVERLAPPED ov = { 0 };
+    LPCWSTR pszFilename = L"./test.txt";
+    DWORD ret;
+    DWORD rw;
+    LARGE_INTEGER endPosition;
+    size_t sz = 1024 * 1024 * 100;
+    BYTE* buf = new BYTE[sz];
+
+    HANDLE hFile = CreateFile(pszFilename, GENERIC_WRITE, FILE_SHARE_WRITE, 0, CREATE_ALWAYS,
+        FILE_FLAG_OVERLAPPED | FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE, 0);
+
+    // file pointer should be set before call async write
+    endPosition.QuadPart = sz;
+    ret = SetFilePointerEx(hFile, endPosition, NULL, FILE_BEGIN);
+    if (ret == INVALID_SET_FILE_POINTER) {
+        return;
+    }
+    if (!SetEndOfFile(hFile)) {
+        return;
+    }
+
+    ov.hEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+    ov.Offset = -1;
+    ov.OffsetHigh = -1;
+    // the max size one time write is 2GB
+    WriteFile(hFile, buf, sz, NULL, &ov);
+    printf("WriteFile return immediately\n");
+    WaitForSingleObject(ov.hEvent, INFINITE);
+    printf("%lld size written\n", ov.InternalHigh);
+
+    CloseHandle(hFile);
+    DeleteFile(pszFilename);
+}
+
+void TestMutipleFileOverlapped() {
+
 }
