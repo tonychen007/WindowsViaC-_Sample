@@ -10,6 +10,7 @@ void TestSetEndFile();
 void TestWriteFileOverlapped();
 void TestMutipleFileOverlapped();
 
+
 int main() {
     printf("TestCreateFileWithNoBuffer\n");
     TestCreateFile();
@@ -158,15 +159,10 @@ void TestWriteFileOverlapped() {
 
     // file pointer should be set before call async write
     endPosition.QuadPart = sz;
-    ret = SetFilePointerEx(hFile, endPosition, NULL, FILE_BEGIN);
-    if (ret == INVALID_SET_FILE_POINTER) {
-        return;
-    }
-    if (!SetEndOfFile(hFile)) {
-        return;
-    }
+    SetFilePointerEx(hFile, endPosition, NULL, FILE_BEGIN);
+    SetEndOfFile(hFile);
 
-    ov.hEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+    ov.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
     ov.Offset = -1;
     ov.OffsetHigh = -1;
     // the max size one time write is 2GB
@@ -180,5 +176,49 @@ void TestWriteFileOverlapped() {
 }
 
 void TestMutipleFileOverlapped() {
+    OVERLAPPED ovRead = { 0 };
+    OVERLAPPED ovWrite = { 0 };
+    LPCWSTR pszFilename = L"./multiasync.txt";
+    LARGE_INTEGER endPosition;
+    DWORD ret;
+    DWORD dwSt;
+    HANDLE hOV[2];
 
+    size_t sz = 1024 * 1024 * 100;
+    BYTE* writeBuf = new BYTE[sz];
+    BYTE readBuf[10] = { 0 };
+
+    HANDLE hFile = CreateFile(pszFilename, GENERIC_READ | GENERIC_WRITE,
+        0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);
+
+    // file pointer should be set before call async write
+    endPosition.QuadPart = sz;
+    SetFilePointerEx(hFile, endPosition, NULL, FILE_BEGIN);
+    SetEndOfFile(hFile);
+
+    // original text is 123, so start write at 4
+    ovRead.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+    ovWrite.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+    ovWrite.Offset = 4;
+    hOV[0] = ovRead.hEvent;
+    hOV[1] = ovWrite.hEvent;
+
+    printf("Write 100M first and read 3 byte\n");
+    WriteFile(hFile, writeBuf, sz, NULL, &ovWrite);
+    ReadFile(hFile, readBuf, 3, NULL, &ovRead);
+
+    WaitForMultipleObjects(_countof(hOV), hOV, TRUE, INFINITE);
+
+    printf("read buf is:%s\n", readBuf);
+
+    // truncate to the original pos
+    endPosition.QuadPart = 3;
+    ret = SetFilePointerEx(hFile, endPosition, NULL, FILE_BEGIN);
+    SetEndOfFile(hFile);
+    FlushFileBuffers(hFile);
+
+    delete[] writeBuf;
+    CloseHandle(ovRead.hEvent);
+    CloseHandle(ovWrite.hEvent);
+    CloseHandle(hFile);
 }
