@@ -1,15 +1,24 @@
 ﻿#include <stdio.h>
 #include <stdint.h>
 #include <assert.h>
+#include <thread>
 #include <Windows.h>
+using namespace std;
 
 void TestCreateFile(bool withBuffer = 0);
+
 void TestCloseOnDelete();
 void DumpFileinCurrDir();
+
 void TestSetEndFile();
 void TestWriteFileOverlapped();
 void TestMutipleFileOverlapped();
 
+void TestAlertableIO();
+void AlertableIOCallback(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped);
+
+void TestQueueUserAPC();
+VOID WINAPI QueueUserAPCThread(ULONG_PTR Parameter);
 
 int main() {
     printf("TestCreateFileWithNoBuffer\n");
@@ -34,6 +43,14 @@ int main() {
     printf("\n");
     printf("TestMutipleFileOverlapped\n");
     TestMutipleFileOverlapped();
+
+    printf("\n");
+    printf("TestAlertableIO\n");
+    //TestAlertableIO();
+
+    printf("\n");
+    printf("TestQueueUserAPC\n");
+    TestQueueUserAPC();
 }
 
 void TestCreateFile(bool withBuffer) {
@@ -221,4 +238,68 @@ void TestMutipleFileOverlapped() {
     CloseHandle(ovRead.hEvent);
     CloseHandle(ovWrite.hEvent);
     CloseHandle(hFile);
+}
+
+void TestAlertableIO() {
+    OVERLAPPED ovRead = { 0 };
+    LPCWSTR pszFilename = L"./SyncAndAsyncIO.cpp";
+    DWORD ret;
+    DWORD dwSt;
+    BYTE readBuf[256] = { 0 };
+    HANDLE hDummpy = CreateEvent(FALSE, FALSE, FALSE, NULL);
+
+    HANDLE hFile = CreateFile(pszFilename, GENERIC_READ,
+        0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);
+
+    ovRead.hEvent = hDummpy;
+    ReadFileEx(hFile, readBuf, 256, &ovRead, AlertableIOCallback);
+
+    printf("Wait 2s for the mutex\n");
+    dwSt = WaitForSingleObject(hDummpy, 2000);
+    if (dwSt == WAIT_OBJECT_0) {
+
+    }
+    else if (dwSt == WAIT_TIMEOUT) {
+        printf("AlertableIOCallback is never called, may be not in alertable state.\n");
+        printf("Try to put AlertableIO into alertable state...\n");
+        SleepEx(0, TRUE);
+    }
+
+    Sleep(2000);
+    dwSt = WaitForSingleObject(hDummpy, 100);
+    if (dwSt == WAIT_OBJECT_0) {
+        printf("return from callback after 5s the wait timeout is ignored.\n");
+    }
+
+    CloseHandle(hDummpy);
+    CloseHandle(hFile);
+}
+
+void AlertableIOCallback(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped) {
+    HANDLE hMutex = OpenMutex(MUTEX_ALL_ACCESS, FALSE, L"AlertaleIOMutex");
+    printf("Inside callback, the numer tansfered is %d\n", dwNumberOfBytesTransfered);
+    Sleep(5000);
+    SetEvent(lpOverlapped->hEvent);
+}
+
+void TestQueueUserAPC() {
+    HANDLE hDummpy = CreateEvent(FALSE, FALSE, FALSE, NULL);
+
+    thread th1 = thread([&] {
+        WaitForSingleObjectEx(hDummpy, INFINITE, TRUE);
+        printf("return for thread\n");
+    });
+
+    printf("Sleep 5s to queue apc\n");
+    Sleep(5000);
+    QueueUserAPC(QueueUserAPCThread, (HANDLE)th1.native_handle(), NULL);
+    WaitForSingleObject((HANDLE)th1.native_handle(), NULL);
+
+    CloseHandle(hDummpy);
+    th1.join();
+}
+
+VOID QueueUserAPCThread(ULONG_PTR Parameter) {
+    printf("QueueUserAPC Callback: Sleep 3s\n");
+    Sleep(3000);
 }
