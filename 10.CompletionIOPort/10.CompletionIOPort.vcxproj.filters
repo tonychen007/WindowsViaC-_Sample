@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="10.CompletionIOPort.cpp">
+    <ClCompile Include="CompletionIOPort.cpp">
       <Filter>來源檔案</Filter>
     </ClCompile>
   </ItemGroup>
