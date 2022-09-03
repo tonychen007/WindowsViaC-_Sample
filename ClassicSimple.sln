@@ -13,46 +13,48 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CommonFiles", "CommonFiles"
 		CommonFiles\WaitChainTraversal.h = CommonFiles\WaitChainTraversal.h
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "01.ErrorLookup", "ErrorLookup\ErrorLookup.vcxproj", "{71319945-E225-448C-9AC6-20CD151FDA94}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "01.ErrorLookup", "01.ErrorLookup\ErrorLookup.vcxproj", "{71319945-E225-448C-9AC6-20CD151FDA94}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "02.UnicodeString", "UnicodeString\UnicodeString.vcxproj", "{AF9290F2-6561-498C-8F1A-B5E4B89646B9}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "02.UnicodeString", "02.UnicodeString\UnicodeString.vcxproj", "{AF9290F2-6561-498C-8F1A-B5E4B89646B9}"
 	ProjectSection(ProjectDependencies) = postProject
 		{B00F3007-0167-486E-9A94-1247A85E0929} = {B00F3007-0167-486E-9A94-1247A85E0929}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "02.UnicodeStringDLL", "UnicodeStringDLL\UnicodeStringDLL.vcxproj", "{B00F3007-0167-486E-9A94-1247A85E0929}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "02.UnicodeStringDLL", "02.UnicodeStringDLL\UnicodeStringDLL.vcxproj", "{B00F3007-0167-486E-9A94-1247A85E0929}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "03.KernelObject", "KernelObject\KernelObject.vcxproj", "{2D18A53C-1A5D-4FC4-BB2F-228DED8B7244}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "03.KernelObject", "03.KernelObject\KernelObject.vcxproj", "{2D18A53C-1A5D-4FC4-BB2F-228DED8B7244}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "03.DuplicateHandle1", "DuplicateHandle1\DuplicateHandle1.vcxproj", "{87D8CE71-15E3-44F7-BF04-25DC75D77072}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "03.DuplicateHandle1", "03.DuplicateHandle1\DuplicateHandle1.vcxproj", "{87D8CE71-15E3-44F7-BF04-25DC75D77072}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "03.DuplicateHandle2", "DuplicateHandle2\DuplicateHandle2.vcxproj", "{85A72776-70A4-403F-8DDD-2508DC9224CC}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "03.DuplicateHandle2", "03.DuplicateHandle2\DuplicateHandle2.vcxproj", "{85A72776-70A4-403F-8DDD-2508DC9224CC}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "03.DuplicateHandle3", "DuplicateHandle3\DuplicateHandle3.vcxproj", "{25A9365B-B8A5-4762-A41E-A25936A227C2}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "03.DuplicateHandle3", "03.DuplicateHandle3\DuplicateHandle3.vcxproj", "{25A9365B-B8A5-4762-A41E-A25936A227C2}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "04.ProcessCUI", "ProcessCUI\ProcessCUI.vcxproj", "{C4F2E4B6-CE88-409E-B85D-29C691B9EEB0}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "04.ProcessCUI", "04.ProcessCUI\ProcessCUI.vcxproj", "{C4F2E4B6-CE88-409E-B85D-29C691B9EEB0}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "04.ProcessGUI", "ProcessGUI\ProcessGUI.vcxproj", "{2B2A2DC8-732B-47B7-B039-4E1AF53B0132}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "04.ProcessGUI", "04.ProcessGUI\ProcessGUI.vcxproj", "{2B2A2DC8-732B-47B7-B039-4E1AF53B0132}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "00.CommonFilesLib", "CommonFilesLib\CommonFilesLib.vcxproj", "{BBB60B64-E51C-46CF-B0C7-E07C07FF208D}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "00.CommonFilesLib", "00.CommonFilesLib\CommonFilesLib.vcxproj", "{BBB60B64-E51C-46CF-B0C7-E07C07FF208D}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "04.ProcessCUIPDHPerf", "ProcessCUIPDHPerf\ProcessCUIPDHPerf.vcxproj", "{C2C247C4-65FC-4A53-AA00-CDC0007A2472}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "04.ProcessCUIPDHPerf", "04.ProcessCUIPDHPerf\ProcessCUIPDHPerf.vcxproj", "{C2C247C4-65FC-4A53-AA00-CDC0007A2472}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "05.Job", "Job\Job.vcxproj", "{3064D441-CAEC-45F5-AE06-5ADE0BE3B2FC}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "05.Job", "05.Job\Job.vcxproj", "{3064D441-CAEC-45F5-AE06-5ADE0BE3B2FC}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "06.ThreadBasic", "ThreadBasic\ThreadBasic.vcxproj", "{7DC32499-A983-4B84-9BB4-8BFF272E954F}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "06.ThreadBasic", "06.ThreadBasic\ThreadBasic.vcxproj", "{7DC32499-A983-4B84-9BB4-8BFF272E954F}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "07.ThreadSchedule", "ThreadSchedule\ThreadSchedule.vcxproj", "{D04D65CA-B03F-41B0-9D95-AF5387F2EC67}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "07.ThreadSchedule", "07.ThreadSchedule\ThreadSchedule.vcxproj", "{D04D65CA-B03F-41B0-9D95-AF5387F2EC67}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "08.ThreadSyncUserMode", "ThreadSyncUserMode\ThreadSyncUserMode.vcxproj", "{28B806E6-8FE3-4B24-8037-B468763903F0}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "08.ThreadSyncUserMode", "08.ThreadSyncUserMode\ThreadSyncUserMode.vcxproj", "{28B806E6-8FE3-4B24-8037-B468763903F0}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "08.ThreadQueue", "ThreadQueue\ThreadQueue.vcxproj", "{58E42800-0A09-4675-AEB2-A2E2C4BF6BE1}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "08.ThreadQueue", "08.ThreadQueue\ThreadQueue.vcxproj", "{58E42800-0A09-4675-AEB2-A2E2C4BF6BE1}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "09.KernelBase", "KernelBase\KernelBase.vcxproj", "{428E6DC3-4274-4ACE-AD68-3939232DE9CC}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "09.KernelBase", "09.KernelBase\KernelBase.vcxproj", "{428E6DC3-4274-4ACE-AD68-3939232DE9CC}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "09.KernelQueue", "KernelQueue\KernelQueue.vcxproj", "{ABED93FA-CD75-4D68-B166-C97F1F7C8F9D}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "09.KernelQueue", "09.KernelQueue\KernelQueue.vcxproj", "{ABED93FA-CD75-4D68-B166-C97F1F7C8F9D}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "10.SyncAndAsyncIO", "SyncAndAsyncIO\SyncAndAsyncIO.vcxproj", "{EE2FF3ED-DC5A-42B8-AA12-5FABB1EAE1DF}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "10.SyncAndAsyncIO", "10.SyncAndAsyncIO\SyncAndAsyncIO.vcxproj", "{EE2FF3ED-DC5A-42B8-AA12-5FABB1EAE1DF}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "10.CompletionIOPort", "10.CompletionIOPort\10.CompletionIOPort.vcxproj", "{C0C1965E-393B-4E5F-B6BD-5356AA56370B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -214,6 +216,14 @@ Global
 		{EE2FF3ED-DC5A-42B8-AA12-5FABB1EAE1DF}.Release|x64.Build.0 = Release|x64
 		{EE2FF3ED-DC5A-42B8-AA12-5FABB1EAE1DF}.Release|x86.ActiveCfg = Release|Win32
 		{EE2FF3ED-DC5A-42B8-AA12-5FABB1EAE1DF}.Release|x86.Build.0 = Release|Win32
+		{C0C1965E-393B-4E5F-B6BD-5356AA56370B}.Debug|x64.ActiveCfg = Debug|x64
+		{C0C1965E-393B-4E5F-B6BD-5356AA56370B}.Debug|x64.Build.0 = Debug|x64
+		{C0C1965E-393B-4E5F-B6BD-5356AA56370B}.Debug|x86.ActiveCfg = Debug|Win32
+		{C0C1965E-393B-4E5F-B6BD-5356AA56370B}.Debug|x86.Build.0 = Debug|Win32
+		{C0C1965E-393B-4E5F-B6BD-5356AA56370B}.Release|x64.ActiveCfg = Release|x64
+		{C0C1965E-393B-4E5F-B6BD-5356AA56370B}.Release|x64.Build.0 = Release|x64
+		{C0C1965E-393B-4E5F-B6BD-5356AA56370B}.Release|x86.ActiveCfg = Release|Win32
+		{C0C1965E-393B-4E5F-B6BD-5356AA56370B}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
