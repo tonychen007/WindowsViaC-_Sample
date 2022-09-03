@@ -22,7 +22,7 @@ int main() {
     TestSimpleQueueCompletionPort(0);
 }
 
-void TestSimpleQueueCompletionPort(int isQueue = 1) {
+void TestSimpleQueueCompletionPort(int isQueue) {
     OVERLAPPED ovRead = { 0 };
     LPCWSTR pszFilename = L"./CompletionIOPort.cpp";
     DWORD dw, ret, dwSt;    
@@ -49,7 +49,7 @@ void TestSimpleQueueCompletionPort(int isQueue = 1) {
     dwSt = GetLastError();
 
     if (ret) {
-        printf("Process completed IO OK. The bytes transfered is :%d\n", pOverlapped->Internal);
+        printf("Process completed IO OK. The bytes transfered is :%d\n", pOverlapped->InternalHigh);
     }
     else {
         if (pOverlapped != NULL) {
@@ -64,4 +64,12 @@ void TestSimpleQueueCompletionPort(int isQueue = 1) {
             }
         }
     }
+
+    if (!isQueue) {
+        ovRead.hEvent = (HANDLE)((DWORD_PTR)ovRead.hEvent & ~1);
+    }
+
+    CloseHandle(ovRead.hEvent);
+    CloseHandle(hIO);
+    CloseHandle(hFile);
 }
