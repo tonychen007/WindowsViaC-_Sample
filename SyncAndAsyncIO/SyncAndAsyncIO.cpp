@@ -21,32 +21,34 @@ void TestQueueUserAPC();
 VOID WINAPI QueueUserAPCThread(ULONG_PTR Parameter);
 
 int main() {
-    printf("TestCreateFileWithNoBuffer\n");
-    TestCreateFile();
+    if (0) {
+        printf("TestCreateFileWithNoBuffer\n");
+        TestCreateFile();
 
-    printf("\n");
-    printf("TestCreateFileWithBuffer\n");
-    TestCreateFile(1);
+        printf("\n");
+        printf("TestCreateFileWithBuffer\n");
+        TestCreateFile(1);
 
-    printf("\n");
-    printf("TestCloseOnDelete\n");
-    TestCloseOnDelete();
+        printf("\n");
+        printf("TestCloseOnDelete\n");
+        TestCloseOnDelete();
 
-    printf("\n");
-    printf("TestSetEndFile\n");
-    TestSetEndFile();
+        printf("\n");
+        printf("TestSetEndFile\n");
+        TestSetEndFile();
 
-    printf("\n");
-    printf("TestWriteFileOverlapped\n");
-    TestWriteFileOverlapped();
+        printf("\n");
+        printf("TestWriteFileOverlapped\n");
+        TestWriteFileOverlapped();
 
-    printf("\n");
-    printf("TestMutipleFileOverlapped\n");
-    TestMutipleFileOverlapped();
+        printf("\n");
+        printf("TestMutipleFileOverlapped\n");
+        TestMutipleFileOverlapped();
+    }
 
     printf("\n");
     printf("TestAlertableIO\n");
-    //TestAlertableIO();
+    TestAlertableIO();
 
     printf("\n");
     printf("TestQueueUserAPC\n");
