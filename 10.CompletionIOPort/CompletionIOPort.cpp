@@ -8,12 +8,12 @@
 #define ASSOCIATE_DEVICE_WITH_COMPLETION_PORT(hDevice, hCompletionPort, dwCompletionKey) \
     CreateIoCompletionPort(hDevice, hCompletionPort, dwCompletionKey, 0);
 
-const int NUM_THREAD = 8;
+const int NUM_THREAD = 4;
 const ULONG_PTR READ_KEY = 1234;
 const ULONG_PTR WRITE_KEY = 4321;
 const ULONG_PTR QUIT_KEY = 8888;
 
-const int BUFFER_SIZE = 64 * 1024;
+const int BUFFER_SIZE = 128 * 1024;
 
 void TestSimpleQueueCompletionPort(int isQueue = 1);
 void TestQueueCompletionPort();
@@ -242,11 +242,7 @@ struct FileIOCP {
 	HANDLE hIO;
 	HANDLE hSrc;
 	HANDLE hDst;
-	LARGE_INTEGER fileSize;
-	CRITICAL_SECTION cs;
 };
-
-long pengingtasks = 0;
 
 void TestMultiFileCopyIOCP() {
 	OVERLAPPED ovRead = { 0 };
@@ -258,6 +254,8 @@ void TestMultiFileCopyIOCP() {
 	OVIOCP* ovs;
 	DWORD dwStart, dwEnd;
 	BOOL ret;
+	size_t chunk;
+
 	LARGE_INTEGER liNextReadOffset = { 0 };
 	int nReadsInProgress = 0;
 	int nWritesInProgress = 0;
@@ -290,17 +288,19 @@ void TestMultiFileCopyIOCP() {
 		hThread[i] = (HANDLE)CreateThread(NULL, 0, MultiFileCopyIOCP, &fileIOCP, 0, NULL);
 	}
 
-	for (int64_t i = 0, j = 0; i < srcFileSize.QuadPart; i += BUFFER_SIZE, j++) {
-		InterlockedIncrement(&pengingtasks);
+	chunk = srcFileSize.QuadPart / NUM_THREAD;
+	chunk = chunk / BUFFER_SIZE * BUFFER_SIZE + (chunk % BUFFER_SIZE ? BUFFER_SIZE : 0);
+
+	for (int64_t i = 0, j = 0; i < srcFileSize.QuadPart; i += chunk, j++) {
 		liNextReadOffset.QuadPart = i;
 		ovs[j].m_fileSize = srcFileSize;
 		ovs[j].m_nextReadOffset = liNextReadOffset;
-		ovs[j].AllocBuffer(BUFFER_SIZE);
-		ovs[j].m_nBuffSize = BUFFER_SIZE;
+		ovs[j].AllocBuffer(chunk);
+		ovs[j].m_nBuffSize = chunk;
 		ovs[j].Offset = liNextReadOffset.LowPart;
 		ovs[j].OffsetHigh = liNextReadOffset.HighPart;
 
-		ReadFile(hSrcFile, ovs[j].m_pvData, BUFFER_SIZE, NULL, &ovs[j]);
+		ReadFile(hSrcFile, ovs[j].m_pvData, chunk, NULL, &ovs[j]);
 	}
 
 	WaitForMultipleObjects(NUM_THREAD, hThread, TRUE, INFINITE);
