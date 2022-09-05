@@ -7,14 +7,16 @@
 #define ASSOCIATE_DEVICE_WITH_COMPLETION_PORT(hDevice, hCompletionPort, dwCompletionKey) \
     CreateIoCompletionPort(hDevice, hCompletionPort, dwCompletionKey, 0);
 
-const int NUM_THREAD = 4;
+const int NUM_THREAD = 8;
 const ULONG_PTR READ_KEY = 1234;
 const ULONG_PTR WRITE_KEY = 4321;
-const int BUFFER_SIZE = 4 * 1024 * 1024;
+const int BUFFER_SIZE = 64 * 1024 * 1024;
 
 void TestSimpleQueueCompletionPort(int isQueue = 1);
 void TestQueueCompletionPort();
 void TestFileCopyIOCP();
+void TestMultiReadFile();
+DWORD WINAPI MultiReadFile(LPVOID args);
 
 struct OVIOCP : public OVERLAPPED {
     OVIOCP() {
@@ -42,19 +44,23 @@ struct OVIOCP : public OVERLAPPED {
 
 int main() {
     printf("TestSimpleQueueCompletionPort\n");
-    //TestSimpleQueueCompletionPort();
+    TestSimpleQueueCompletionPort();
 
     printf("\n");
     printf("TestSimpleNotQueueCompletionPort\n");
-    //TestSimpleQueueCompletionPort(0);
+    TestSimpleQueueCompletionPort(0);
 
     printf("\n");
     printf("TestQueueCompletionPort\n");
-    //TestQueueCompletionPort();
+    TestQueueCompletionPort();
 
     printf("\n");
     printf("TestFileCopyIOCP\n");
     TestFileCopyIOCP();
+
+    printf("\n");
+    printf("TestMultiReadFile\n");
+    TestMultiReadFile();
 }
 
 void TestSimpleQueueCompletionPort(int isQueue) {
@@ -139,7 +145,6 @@ void TestQueueCompletionPort() {
 
     CloseHandle(hIO);
     CloseHandle(hFile);
-    DeleteFile(pszFilename);
 }
 
 void TestFileCopyIOCP() {
@@ -225,4 +230,66 @@ end:
     CloseHandle(hDstFile);
     CloseHandle(hIO);
     DeleteFile(pszDstFilename);
+}
+
+struct readOffset {
+    HANDLE hSrcFile;
+    HANDLE hDstFile;
+    LARGE_INTEGER offset;
+    int bufferSize;
+};
+
+void TestMultiReadFile() {
+    HANDLE hThread[NUM_THREAD];
+    LPCWSTR pszSrcFilename = L"./vminst.zip";
+    LPCWSTR pszDstFilename = L"./vminst.cpy";
+    HANDLE hSrcFile, hDstFile;
+    LARGE_INTEGER srcFileSize;
+    DWORD dwStart, dwEnd;
+
+    hSrcFile = CreateFile(pszSrcFilename, GENERIC_READ, 0, 0, OPEN_EXISTING,
+        FILE_FLAG_NO_BUFFERING, 0);
+    hDstFile = CreateFile(pszDstFilename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
+
+    GetFileSizeEx(hSrcFile, &srcFileSize);
+    int chunk = srcFileSize.QuadPart / NUM_THREAD;
+    int roundUpChunk = (chunk / BUFFER_SIZE) * BUFFER_SIZE + ((chunk % BUFFER_SIZE) ? BUFFER_SIZE : 0);
+    readOffset ro[NUM_THREAD];
+
+    dwStart = GetTickCount();
+    for (int i = 0; i < NUM_THREAD; i++) {
+        ro[i].offset.QuadPart = i * roundUpChunk;
+        ro[i].bufferSize = roundUpChunk;
+        ro[i].hSrcFile = hSrcFile;
+        ro[i].hDstFile = hDstFile;
+
+        hThread[i] = CreateThread(NULL, 0, MultiReadFile, &ro[i], 0, 0);
+    }
+
+    WaitForMultipleObjects(_countof(hThread), hThread, TRUE, INFINITE);
+
+    CloseHandle(hDstFile);
+    hDstFile = CreateFile(pszDstFilename, GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+    SetFilePointerEx(hDstFile, srcFileSize, NULL, FILE_BEGIN);
+    SetEndOfFile(hDstFile);
+    CloseHandle(hSrcFile);
+    CloseHandle(hDstFile);
+
+    dwEnd = GetTickCount();
+    printf("Copy time is %fs\n", (dwEnd - dwStart) / 1000.0f);
+}
+
+DWORD WINAPI MultiReadFile(LPVOID args) {
+    OVERLAPPED ov = { 0 };
+    readOffset ro = *(readOffset*)args;
+    LPVOID buf = VirtualAlloc(NULL, ro.bufferSize, MEM_COMMIT, PAGE_READWRITE);
+    ov.Offset = ro.offset.LowPart;
+    ov.OffsetHigh = ro.offset.HighPart;
+
+    printf("start offset is : %d\n", ro.offset.QuadPart);
+    ReadFile(ro.hSrcFile, buf, ro.bufferSize, NULL, &ov);
+    WriteFile(ro.hDstFile, buf, ro.bufferSize, NULL, &ov);
+    VirtualFree(buf, 0, MEM_RELEASE);
+
+    return 0;
 }
