@@ -56,6 +56,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "10.SyncAndAsyncIO", "10.Syn
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "10.CompletionIOPort", "10.CompletionIOPort\10.CompletionIOPort.vcxproj", "{C0C1965E-393B-4E5F-B6BD-5356AA56370B}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "11.ThreadPool", "11.ThreadPool\11.ThreadPool.vcxproj", "{6FBBB272-D021-4CB4-A04B-F4D72690070D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -224,6 +226,14 @@ Global
 		{C0C1965E-393B-4E5F-B6BD-5356AA56370B}.Release|x64.Build.0 = Release|x64
 		{C0C1965E-393B-4E5F-B6BD-5356AA56370B}.Release|x86.ActiveCfg = Release|Win32
 		{C0C1965E-393B-4E5F-B6BD-5356AA56370B}.Release|x86.Build.0 = Release|Win32
+		{6FBBB272-D021-4CB4-A04B-F4D72690070D}.Debug|x64.ActiveCfg = Debug|x64
+		{6FBBB272-D021-4CB4-A04B-F4D72690070D}.Debug|x64.Build.0 = Debug|x64
+		{6FBBB272-D021-4CB4-A04B-F4D72690070D}.Debug|x86.ActiveCfg = Debug|Win32
+		{6FBBB272-D021-4CB4-A04B-F4D72690070D}.Debug|x86.Build.0 = Debug|Win32
+		{6FBBB272-D021-4CB4-A04B-F4D72690070D}.Release|x64.ActiveCfg = Release|x64
+		{6FBBB272-D021-4CB4-A04B-F4D72690070D}.Release|x64.Build.0 = Release|x64
+		{6FBBB272-D021-4CB4-A04B-F4D72690070D}.Release|x86.ActiveCfg = Release|Win32
+		{6FBBB272-D021-4CB4-A04B-F4D72690070D}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
