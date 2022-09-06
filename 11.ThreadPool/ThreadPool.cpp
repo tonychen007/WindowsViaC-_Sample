@@ -1,39 +1,55 @@
 ﻿#include <Windows.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <thread>
+#include <locale.h>
+using namespace std;
 
 VOID NTAPI SimpleCallback(PTP_CALLBACK_INSTANCE Instance, PVOID Context);
 VOID CALLBACK SimpleCallback2(PTP_CALLBACK_INSTANCE, PVOID Context, PTP_WORK);
 VOID CALLBACK BatchCallback(PTP_CALLBACK_INSTANCE, PVOID Context, PTP_WORK);
 VOID CALLBACK TimerCallback(PTP_CALLBACK_INSTANCE Instance, PVOID Context, PTP_TIMER Timer);
+VOID CALLBACK WaitCallback(PTP_CALLBACK_INSTANCE pInstance, PVOID Context, PTP_WAIT Wait, TP_WAIT_RESULT WaitResult);
+VOID CALLBACK IOCPCallBack(PTP_CALLBACK_INSTANCE Instance, PVOID Context,
+	PVOID Overlapped, ULONG IoResult, ULONG_PTR NumberOfBytesTransferred, PTP_IO Io);
 
 void TestSimpleThreadPool();
 void TestCreateThreadPool();
 void TestBatchCallback();
 void TestBatchTimerCallback(DWORD msWindowsLength = 0);
+void TestWaitObjectCallBack();
+void TestWaitOnAsyncIOCP();
 
 volatile long gCounter = 0;
 HANDLE ghEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 
 int main() {
 	printf("TestSimpleThreadPool\n");
-	TestSimpleThreadPool();
+	//TestSimpleThreadPool();
 
 	printf("\n");
 	printf("TestCreateThreadPool\n");
-	TestCreateThreadPool();
+	//TestCreateThreadPool();
 
 	printf("\n");
 	printf("TestBatchCallback\n");
-	TestBatchCallback();
+	//TestBatchCallback();
 
 	printf("\n");
 	printf("TestBatchTimerCallback with 0 msWindowsLength\n");
-	TestBatchTimerCallback();
+	//TestBatchTimerCallback();
 
 	printf("\n");
 	printf("TestBatchTimerCallback with 2000 msWindowsLength\n");
-	TestBatchTimerCallback(2000);
+	//TestBatchTimerCallback(2000);
+
+	printf("\n");
+	printf("TestWaitObjectCallBack\n");
+	//TestWaitObjectCallBack();
+
+	printf("\n");
+	printf("TestWaitOnAsyncIOCP\n");
+	TestWaitOnAsyncIOCP();
 }
 
 VOID NTAPI SimpleCallback(PTP_CALLBACK_INSTANCE Instance, PVOID Context) {
@@ -76,6 +92,17 @@ VOID CALLBACK TimerCallback(PTP_CALLBACK_INSTANCE Instance, PVOID Context, PTP_T
 		return;
 	}
 	LeaveCriticalSection(&cs);
+}
+
+VOID CALLBACK WaitCallback(PTP_CALLBACK_INSTANCE pInstance, PVOID Context, PTP_WAIT Wait, TP_WAIT_RESULT WaitResult) {
+	printf("Inside WaitCallback\n");
+	SetEvent(ghEvent);
+}
+
+VOID CALLBACK IOCPCallBack(PTP_CALLBACK_INSTANCE Instance, PVOID Context, PVOID Overlapped,
+	ULONG IoResult, ULONG_PTR NumberOfBytesTransferred, PTP_IO Io) {
+
+	printf("IO Result: %d, bytes transferred: %d\n", IoResult, NumberOfBytesTransferred);
 }
 
 void TestSimpleThreadPool() {
@@ -155,4 +182,47 @@ void TestBatchTimerCallback(DWORD msWindowsLength) {
 	CloseThreadpoolTimer(timer2);
 	CloseThreadpoolTimer(timer3);
 	DeleteCriticalSection(&cs);
+}
+
+void TestWaitObjectCallBack() {
+	PTP_WAIT waiter;
+
+	thread th1 = thread([&] {
+		printf("Sleep 1 second to set event\n");
+		Sleep(1000);
+		SetEvent(ghEvent);
+	});
+	th1.detach();
+
+	waiter = CreateThreadpoolWait(WaitCallback, NULL, NULL);
+	SetThreadpoolWait(waiter, ghEvent, NULL);
+	WaitForSingleObject(ghEvent, INFINITE);
+
+	WaitForThreadpoolWaitCallbacks(waiter, FALSE);
+	CloseThreadpoolWait(waiter);
+}
+
+void TestWaitOnAsyncIOCP() {
+	OVERLAPPED ov = {};
+	CHAR buf[256] = { 0 };
+	int len = _countof(buf) - 1;
+
+	HANDLE hFile = CreateFile(L"ThreadPool.cpp", GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
+	PTP_IO pIo = CreateThreadpoolIo(hFile, IOCPCallBack, NULL, NULL);
+	StartThreadpoolIo(pIo);
+
+	ReadFile(hFile, buf, len, NULL, &ov);
+	if (ERROR_IO_PENDING == GetLastError()) {
+		CancelThreadpoolIo(pIo);
+	}
+	char* p = buf;
+
+	// skip UTF8 bom
+	if (buf[0] == char(0xef) && buf[1] == char(0xbb) && buf[2] == char(0xbf))
+		p += 3;
+	printf("%s\n", p);
+
+	WaitForThreadpoolIoCallbacks(pIo, false);
+	CloseThreadpoolIo(pIo);
+	CloseHandle(hFile);
 }
