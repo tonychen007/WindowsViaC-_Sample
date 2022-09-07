@@ -1,0 +1,3 @@
+LIBRARY 19.DLLBasic.dll
+EXPORTS
+add @1
