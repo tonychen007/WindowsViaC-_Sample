@@ -13,6 +13,8 @@ VOID CALLBACK WaitCallback(PTP_CALLBACK_INSTANCE pInstance, PVOID Context, PTP_W
 VOID CALLBACK IOCPCallBack(PTP_CALLBACK_INSTANCE Instance, PVOID Context,
 	PVOID Overlapped, ULONG IoResult, ULONG_PTR NumberOfBytesTransferred, PTP_IO Io);
 
+VOID CALLBACK CleanupGroupCancelCallback(PVOID pvObjectContext, PVOID pvCleanupContext);
+
 void TestSimpleThreadPool();
 void TestCreateThreadPool();
 void TestBatchCallback();
@@ -27,11 +29,11 @@ HANDLE ghEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 
 int main() {
 	printf("TestSimpleThreadPool\n");
-	//TestSimpleThreadPool();
+	TestSimpleThreadPool();
 
 	printf("\n");
 	printf("TestCreateThreadPool\n");
-	//TestCreateThreadPool();
+	TestCreateThreadPool();
 
 	printf("\n");
 	printf("TestBatchCallback\n");
@@ -116,6 +118,10 @@ VOID CALLBACK IOCPCallBack(PTP_CALLBACK_INSTANCE Instance, PVOID Context, PVOID 
 
 	BOOL ret = CallbackMayRunLong(Instance);
 	printf("IO Result: %d, bytes transferred: %d\n", IoResult, NumberOfBytesTransferred);
+}
+
+VOID CALLBACK CleanupGroupCancelCallback(PVOID pvObjectContext, PVOID pvCleanupContext) {
+	printf("CleanupGroupCancelCallback: %s, %s\n", pvObjectContext, pvCleanupContext);
 }
 
 void TestSimpleThreadPool() {
@@ -264,9 +270,9 @@ void TestThreadPoolEnviron() {
 
 	cleanupgroup = CreateThreadpoolCleanupGroup();
 	SetThreadpoolCallbackPool(&CallBackEnviron, pool);
-	SetThreadpoolCallbackCleanupGroup(&CallBackEnviron, cleanupgroup, NULL);
+	SetThreadpoolCallbackCleanupGroup(&CallBackEnviron, cleanupgroup, CleanupGroupCancelCallback);
 
-	worker = CreateThreadpoolWork(SimpleCallback2, NULL, &CallBackEnviron);
+	worker = CreateThreadpoolWork(SimpleCallback2, (void*)"Tony Context", &CallBackEnviron);
 
 	printf("min and max thread is set to 1, so it will run singly\n");
 	SubmitThreadpoolWork(worker);
@@ -274,6 +280,7 @@ void TestThreadPoolEnviron() {
 	SubmitThreadpoolWork(worker);
 	SubmitThreadpoolWork(worker);
 
-	CloseThreadpoolCleanupGroupMembers(cleanupgroup, FALSE, NULL);
+	CloseThreadpoolCleanupGroupMembers(cleanupgroup, FALSE, (void*)"Tony Chan Clean Up");
 	CloseThreadpool(pool);
+	DestroyThreadpoolEnvironment(&CallBackEnviron);
 }
