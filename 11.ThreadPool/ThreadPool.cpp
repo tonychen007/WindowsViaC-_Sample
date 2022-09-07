@@ -5,7 +5,7 @@
 #include <locale.h>
 using namespace std;
 
-VOID NTAPI SimpleCallback(PTP_CALLBACK_INSTANCE Instance, PVOID Context);
+VOID CALLBACK SimpleCallback(PTP_CALLBACK_INSTANCE Instance, PVOID Context);
 VOID CALLBACK SimpleCallback2(PTP_CALLBACK_INSTANCE, PVOID Context, PTP_WORK);
 VOID CALLBACK BatchCallback(PTP_CALLBACK_INSTANCE, PVOID Context, PTP_WORK);
 VOID CALLBACK TimerCallback(PTP_CALLBACK_INSTANCE Instance, PVOID Context, PTP_TIMER Timer);
@@ -19,6 +19,8 @@ void TestBatchCallback();
 void TestBatchTimerCallback(DWORD msWindowsLength = 0);
 void TestWaitObjectCallBack();
 void TestWaitOnAsyncIOCP();
+void TestRegNotify();
+void TestThreadPoolEnviron();
 
 volatile long gCounter = 0;
 HANDLE ghEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -49,7 +51,15 @@ int main() {
 
 	printf("\n");
 	printf("TestWaitOnAsyncIOCP\n");
-	TestWaitOnAsyncIOCP();
+	//TestWaitOnAsyncIOCP();
+
+	printf("\n");
+	printf("TestRegNotify\n");
+	//TestRegNotify();
+
+	printf("\n");
+	printf("TestThreadPoolEnviron\n");
+	TestThreadPoolEnviron();
 }
 
 VOID NTAPI SimpleCallback(PTP_CALLBACK_INSTANCE Instance, PVOID Context) {
@@ -96,12 +106,15 @@ VOID CALLBACK TimerCallback(PTP_CALLBACK_INSTANCE Instance, PVOID Context, PTP_T
 
 VOID CALLBACK WaitCallback(PTP_CALLBACK_INSTANCE pInstance, PVOID Context, PTP_WAIT Wait, TP_WAIT_RESULT WaitResult) {
 	printf("Inside WaitCallback\n");
-	SetEvent(ghEvent);
+	printf("pass pInstance to SetEventWhenCallbackReturns\n");
+	SetEventWhenCallbackReturns(pInstance, ghEvent);
+	//SetEvent(ghEvent);
 }
 
 VOID CALLBACK IOCPCallBack(PTP_CALLBACK_INSTANCE Instance, PVOID Context, PVOID Overlapped,
 	ULONG IoResult, ULONG_PTR NumberOfBytesTransferred, PTP_IO Io) {
 
+	BOOL ret = CallbackMayRunLong(Instance);
 	printf("IO Result: %d, bytes transferred: %d\n", IoResult, NumberOfBytesTransferred);
 }
 
@@ -188,8 +201,8 @@ void TestWaitObjectCallBack() {
 	PTP_WAIT waiter;
 
 	thread th1 = thread([&] {
-		printf("Sleep 1 second to set event\n");
-		Sleep(1000);
+		printf("Sleep 3 second to set event\n");
+		Sleep(3000);
 		SetEvent(ghEvent);
 	});
 	th1.detach();
@@ -225,4 +238,42 @@ void TestWaitOnAsyncIOCP() {
 	WaitForThreadpoolIoCallbacks(pIo, false);
 	CloseThreadpoolIo(pIo);
 	CloseHandle(hFile);
+}
+
+void TestRegNotify() {
+	HKEY hKey;
+	LPCTSTR  path = L"Network";
+	RegOpenKeyEx(HKEY_CURRENT_USER, path, 0, KEY_READ, &hKey);
+
+	RegNotifyChangeKeyValue(hKey, TRUE, REG_NOTIFY_CHANGE_LAST_SET, ghEvent, TRUE);
+	WaitForSingleObject(ghEvent, INFINITE);
+
+	RegCloseKey(hKey);
+}
+
+void TestThreadPoolEnviron() {
+	TP_CALLBACK_ENVIRON CallBackEnviron;
+	PTP_WORK worker;
+	PTP_POOL pool;
+	PTP_CLEANUP_GROUP cleanupgroup;
+
+	InitializeThreadpoolEnvironment(&CallBackEnviron);
+	pool = CreateThreadpool(NULL);
+	SetThreadpoolThreadMaximum(pool, 1);
+	SetThreadpoolThreadMinimum(pool, 1);
+
+	cleanupgroup = CreateThreadpoolCleanupGroup();
+	SetThreadpoolCallbackPool(&CallBackEnviron, pool);
+	SetThreadpoolCallbackCleanupGroup(&CallBackEnviron, cleanupgroup, NULL);
+
+	worker = CreateThreadpoolWork(SimpleCallback2, NULL, &CallBackEnviron);
+
+	printf("min and max thread is set to 1, so it will run singly\n");
+	SubmitThreadpoolWork(worker);
+	SubmitThreadpoolWork(worker);
+	SubmitThreadpoolWork(worker);
+	SubmitThreadpoolWork(worker);
+
+	CloseThreadpoolCleanupGroupMembers(cleanupgroup, FALSE, NULL);
+	CloseThreadpool(pool);
 }
