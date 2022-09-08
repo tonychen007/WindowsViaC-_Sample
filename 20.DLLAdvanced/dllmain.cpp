@@ -4,7 +4,7 @@
 HMODULE g_hDll = NULL;
 
 DWORD WINAPI FreeSelfProc(PVOID param) {
-    MessageBox(NULL, L"Press OK to unload inside DLL", NULL, MB_OK);
+    //MessageBox(NULL, L"Press OK to unload inside DLL", NULL, MB_OK);
 
     // after call to FreeLibrary, the process will crash
     // because the EIP no long existed
