@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="20.DLLAdvancedExe.cpp">
+    <ClCompile Include="DLLAdvancedExe.cpp">
       <Filter>來源檔案</Filter>
     </ClCompile>
   </ItemGroup>
