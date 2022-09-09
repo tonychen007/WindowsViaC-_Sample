@@ -139,7 +139,7 @@ void TestDLLProcessDetach(BOOL isTerminate) {
 }
 
 void TestDLLThreadAttachDetach() {
-	HMODULE hDll1 = LoadLibrary(DLL_NAME_19);
+	HMODULE hDll1 = LoadLibrary(DLL_NAME_20);
 
 	// Load dll in a seperate thread
 	thread th1 = thread([&] {

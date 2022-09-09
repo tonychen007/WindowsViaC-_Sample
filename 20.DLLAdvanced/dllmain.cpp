@@ -2,6 +2,7 @@
 #include <Windows.h>
 
 HMODULE g_hDll = NULL;
+HANDLE hThread = NULL;
 
 DWORD WINAPI FreeSelfProc(PVOID param) {
     //MessageBox(NULL, L"Press OK to unload inside DLL", NULL, MB_OK);
@@ -22,7 +23,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
     switch (ul_reason_for_call) {
     case DLL_PROCESS_ATTACH: {
         g_hDll = (HMODULE)hModule;
-        HANDLE hThread = ::CreateThread(NULL, 0, FreeSelfProc, NULL, 0, NULL);
+        hThread = ::CreateThread(NULL, 0, FreeSelfProc, NULL, 0, NULL);
         CloseHandle(hThread);
     }
         break;
