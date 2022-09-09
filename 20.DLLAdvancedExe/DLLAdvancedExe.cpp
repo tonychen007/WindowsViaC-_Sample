@@ -18,6 +18,7 @@ void TestLoadDLLWithFlag(DWORD flag = 0);
 void TestFreeLibraryAndExitThread();
 void TestLoadDLLName();
 void TestLoadFuncFromDLL();
+void TestDLLDetach(BOOL isTerminate = FALSE);
 
 int main() {
 	printf("TestLoadDLLNoRef\n");
@@ -29,7 +30,7 @@ int main() {
 
 	printf("\n");
 	printf("TestFreeLibraryAndExitThread\n");
-	TestFreeLibraryAndExitThread();
+	//TestFreeLibraryAndExitThread();
 
 	printf("\n");
 	printf("TestLoadDLLName\n");
@@ -38,6 +39,14 @@ int main() {
 	printf("\n");
 	printf("TestLoadFuncFromDLL\n");
 	TestLoadFuncFromDLL();
+
+	printf("\n");
+	printf("TestDLLDetach With TerminateProcess\n");
+	//TestDLLDetach(TRUE);
+
+	printf("\n");
+	printf("TestDLLDetach Without TerminateProcess\n");
+	TestDLLDetach();
 }
 
 void TestLoadDLLWithFlag(DWORD flag) {
@@ -55,7 +64,6 @@ void TestLoadDLLWithFlag(DWORD flag) {
 void TestFreeLibraryAndExitThread() {
 	HMODULE hDLL = LoadLibrary(DLL_NAME_20);
 
-	printf("Press key to end...\n");
 	Sleep(1000);
 	hDLL = GetModuleHandle(L"20.DLLAdvanced.dll");
 	printf("After free inside DLL, the hDLL is %p\n", hDLL);
@@ -81,6 +89,9 @@ void TestLoadDLLName() {
 	printf("The name of dll1 is %p\n", hDll1);
 	printf("The name of dll2 is %p\n", hDll2);
 	printf("The name of dll3 is %p\n", hDll3);
+	FreeLibrary(hDll1);
+	FreeLibrary(hDll2);
+	FreeLibrary(hDll3);
 }
 
 
@@ -103,4 +114,16 @@ void TestLoadFuncFromDLL() {
 	}
 
 	FreeLibrary(hDLL);
+}
+
+void TestDLLDetach(BOOL isTerminate) {
+	HMODULE hDll1 = LoadLibrary(DLL_NAME_20);
+
+	if (isTerminate) {
+		printf("Call terminate process without FreeLibrary\n");
+		TerminateProcess(GetCurrentProcess(), 0);
+	}
+	else {
+		printf("Do not call terminate and FreeLibrary\n");
+	}
 }
