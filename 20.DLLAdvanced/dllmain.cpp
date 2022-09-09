@@ -27,11 +27,13 @@ BOOL APIENTRY DllMain( HMODULE hModule,
     }
         break;
     case DLL_THREAD_ATTACH:
+        printf("thread dll attach\n");
         break;
     case DLL_THREAD_DETACH:
+        printf("thread dll detach\n");
         break;
     case DLL_PROCESS_DETACH:
-        printf("Dll detach\n");
+        printf("process dll detach\n");
         break;
     }
     return TRUE;

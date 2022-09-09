@@ -18,19 +18,21 @@ void TestLoadDLLWithFlag(DWORD flag = 0);
 void TestFreeLibraryAndExitThread();
 void TestLoadDLLName();
 void TestLoadFuncFromDLL();
-void TestDLLDetach(BOOL isTerminate = FALSE);
+void TestDLLProcessDetach(BOOL isTerminate = FALSE);
+void TestDLLThreadAttachDetach();
+void TestDLLThreadDetach();
 
 int main() {
 	printf("TestLoadDLLNoRef\n");
-	//TestLoadDLLWithFlag(DONT_RESOLVE_DLL_REFERENCES);
+	TestLoadDLLWithFlag(DONT_RESOLVE_DLL_REFERENCES);
 
 	printf("\n");
 	printf("TestLoadDLLAsDATA\n");
-	//TestLoadDLLWithFlag(LOAD_LIBRARY_AS_DATAFILE);
+	TestLoadDLLWithFlag(LOAD_LIBRARY_AS_DATAFILE);
 
 	printf("\n");
 	printf("TestFreeLibraryAndExitThread\n");
-	//TestFreeLibraryAndExitThread();
+	TestFreeLibraryAndExitThread();
 
 	printf("\n");
 	printf("TestLoadDLLName\n");
@@ -42,15 +44,19 @@ int main() {
 
 	printf("\n");
 	printf("TestDLLDetach With TerminateProcess\n");
-	//TestDLLDetach(TRUE);
+	//TestDLLProcessDetach(TRUE);
 
 	printf("\n");
 	printf("TestDLLDetach Without TerminateProcess\n");
-	TestDLLDetach();
+	TestDLLProcessDetach();
+
+	printf("\n");
+	printf("TestDLLThreadAttachDetach\n");
+	TestDLLThreadAttachDetach();
 }
 
 void TestLoadDLLWithFlag(DWORD flag) {
-	HMODULE hDLL = LoadLibraryEx(L"19.DLLBasic.dll", NULL, flag);
+	HMODULE hDLL = LoadLibraryEx(DLL_NAME_19, NULL, flag);
 
 	addFunpadd add = (addFunpadd)GetProcAddress(hDLL, "add");
 	__try {
@@ -59,6 +65,8 @@ void TestLoadDLLWithFlag(DWORD flag) {
 	__except (MyExceptionHandler(GetExceptionInformation())) {
 		printf("GetProcAddress is OK, but the call of add should fail\n");
 	}
+
+	FreeLibrary(hDLL);
 }
 
 void TestFreeLibraryAndExitThread() {
@@ -116,7 +124,7 @@ void TestLoadFuncFromDLL() {
 	FreeLibrary(hDLL);
 }
 
-void TestDLLDetach(BOOL isTerminate) {
+void TestDLLProcessDetach(BOOL isTerminate) {
 	HMODULE hDll1 = LoadLibrary(DLL_NAME_20);
 
 	if (isTerminate) {
@@ -126,4 +134,18 @@ void TestDLLDetach(BOOL isTerminate) {
 	else {
 		printf("Do not call terminate and FreeLibrary\n");
 	}
+
+	FreeLibrary(hDll1);
+}
+
+void TestDLLThreadAttachDetach() {
+	HMODULE hDll1 = LoadLibrary(DLL_NAME_19);
+
+	// Load dll in a seperate thread
+	thread th1 = thread([&] {
+		Sleep(1000);
+	});
+
+	th1.join();
+	FreeLibrary(hDll1);
 }
