@@ -148,7 +148,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="20.DelayLoadDLL.cpp" />
+    <ClCompile Include="DelayLoadDLL.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\19.DLLBasic\19.DLLBasic.vcxproj">

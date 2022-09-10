@@ -4,6 +4,8 @@
 
 int gVal;
 
+#pragma comment(linker, "/export:add2=ntdll.NtReadFile")
+
 int add(int a, int b) {
 	gVal = a + b;
 	return a + b;
