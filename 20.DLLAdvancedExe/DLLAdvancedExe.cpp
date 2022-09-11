@@ -3,6 +3,8 @@
 #include <thread>
 using namespace std;
 
+int gVal;
+
 #define DLL_NAME_20 L"20.DLLAdvanced.dll"
 #define DLL_NAME_19 L"19.DLLBasic.dll"
 
@@ -14,6 +16,7 @@ LONG MyExceptionHandler(EXCEPTION_POINTERS* excpInfo) {
 	return EXCEPTION_EXECUTE_HANDLER;
 }
 
+void TestGlobalVarMapping();
 void TestLoadDLLWithFlag(DWORD flag = 0);
 void TestFreeLibraryAndExitThread();
 void TestLoadDLLName();
@@ -23,6 +26,8 @@ void TestDLLThreadAttachDetach();
 void TestDLLThreadDetach();
 
 int main() {
+	TestGlobalVarMapping();
+
 	printf("TestLoadDLLNoRef\n");
 	TestLoadDLLWithFlag(DONT_RESOLVE_DLL_REFERENCES);
 
@@ -53,6 +58,10 @@ int main() {
 	printf("\n");
 	printf("TestDLLThreadAttachDetach\n");
 	TestDLLThreadAttachDetach();
+}
+
+void TestGlobalVarMapping() {
+	gVal = 5;
 }
 
 void TestLoadDLLWithFlag(DWORD flag) {
