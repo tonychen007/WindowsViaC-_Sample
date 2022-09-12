@@ -1,5 +1,7 @@
 ﻿#include <stdio.h>
+#include <typeinfo>
 #include <Windows.h>
+#include <ImageHlp.h>
 #include <thread>
 using namespace std;
 
@@ -24,16 +26,19 @@ void TestLoadFuncFromDLL();
 void TestDLLProcessDetach(BOOL isTerminate = FALSE);
 void TestDLLThreadAttachDetach();
 void TestDLLThreadDetach();
+void TestBindDLL();
+
+BOOL WINAPI BindDllRoutine(IMAGEHLP_STATUS_REASON Reason, PCSTR ImageName, PCSTR DllName, ULONG_PTR Va, ULONG_PTR Parameter);
 
 int main() {
 	TestGlobalVarMapping();
 
 	printf("TestLoadDLLNoRef\n");
-	TestLoadDLLWithFlag(DONT_RESOLVE_DLL_REFERENCES);
+	//TestLoadDLLWithFlag(DONT_RESOLVE_DLL_REFERENCES);
 
 	printf("\n");
 	printf("TestLoadDLLAsDATA\n");
-	TestLoadDLLWithFlag(LOAD_LIBRARY_AS_DATAFILE);
+	//TestLoadDLLWithFlag(LOAD_LIBRARY_AS_DATAFILE);
 
 	printf("\n");
 	printf("TestFreeLibraryAndExitThread\n");
@@ -41,11 +46,11 @@ int main() {
 
 	printf("\n");
 	printf("TestLoadDLLName\n");
-	TestLoadDLLName();
+	//TestLoadDLLName();
 
 	printf("\n");
 	printf("TestLoadFuncFromDLL\n");
-	TestLoadFuncFromDLL();
+	//TestLoadFuncFromDLL();
 
 	printf("\n");
 	printf("TestDLLDetach With TerminateProcess\n");
@@ -53,11 +58,15 @@ int main() {
 
 	printf("\n");
 	printf("TestDLLDetach Without TerminateProcess\n");
-	TestDLLProcessDetach();
+	//TestDLLProcessDetach();
 
 	printf("\n");
 	printf("TestDLLThreadAttachDetach\n");
-	TestDLLThreadAttachDetach();
+	//TestDLLThreadAttachDetach();
+
+	printf("\n");
+	printf("TestBindDLL\n");
+	TestBindDLL();
 }
 
 void TestGlobalVarMapping() {
@@ -157,4 +166,40 @@ void TestDLLThreadAttachDetach() {
 
 	th1.join();
 	FreeLibrary(hDll1);
+}
+
+void TestBindDLL() {
+	BOOL ret;
+
+	ret = BindImageEx(BIND_ALL_IMAGES, "20test.exe", NULL, NULL, BindDllRoutine);
+}
+
+BOOL WINAPI BindDllRoutine(IMAGEHLP_STATUS_REASON Reason, PCSTR ImageName, PCSTR DllName, ULONG_PTR Va, ULONG_PTR Parameter) {
+	static const char* enum_str[] = {
+		"BindOutOfMemory",
+		"BindRvaToVaFailed",
+		"BindNoRoomInImage",
+		"BindImportModuleFailed",
+		"BindImportProcedureFailed",
+		"BindImportModule",
+		"BindImportProcedure",
+		"BindForwarder",
+		"BindForwarderNOT",
+		"BindImageModified",
+		"BindExpandFileHeaders",
+		"BindImageComplete",
+		"BindMismatchedSymbols",
+		"BindSymbolsNotUpdated",
+		"BindImportProcedure32",
+		"BindImportProcedure64",
+		"BindForwarder32",
+		"BindForwarder64",
+		"BindForwarderNOT32",
+		"BindForwarderNOT64"
+	};
+
+	printf("Reason: %s, Dll name: %s, RVA: 0x%X\n",
+		enum_str[Reason], DllName, Va);
+
+	return 0;
 }
