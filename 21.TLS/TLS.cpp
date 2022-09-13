@@ -9,8 +9,11 @@ void TestSimpleTls();
 void TestSimpleTls2();
 DWORD WINAPI SimpleTls2Thread(LPVOID args);
 
-void TestDllTls();
+void TestDynamicDllTls();
 DWORD WINAPI DllTlsThread(LPVOID args);
+
+void TestStaticDllTls();
+DWORD WINAPI DllTlsStaticThread(LPVOID args);
 
 int main() {
     printf("TestSimpleTls\n");
@@ -22,7 +25,11 @@ int main() {
 
     printf("\n");
     printf("TestDllTls\n");
-    TestDllTls();
+    TestDynamicDllTls();
+
+    printf("\n");
+    printf("TestStaticDllTls\n");
+    TestStaticDllTls();
 }
 
 void TestSimpleTls() {
@@ -67,7 +74,9 @@ DWORD WINAPI SimpleTls2Thread(LPVOID args) {
     return 0;
 }
 
-void TestDllTls() {
+int gTlsVal;
+
+void TestDynamicDllTls() {
     const int THREAD_CNT = 3;
     HMODULE hDll = LoadLibrary(L"21.TLSDll.dll");
     HANDLE hThs[THREAD_CNT];
@@ -84,6 +93,11 @@ DWORD WINAPI DllTlsThread(LPVOID args) {
     DWORD dwThreadCnt = *(DWORD*)args;
     BOOL ret;
 
+    /* wrong for global varibale
+    gTlsVal = GetCurrentThreadId();
+    Sleep(10);
+    ret = StoreData(gTlsVal);
+    */
     ret = StoreData(GetCurrentThreadId());
     if (!ret)
         ExitProcess(0);
@@ -99,6 +113,35 @@ DWORD WINAPI DllTlsThread(LPVOID args) {
             printf("thread %d: data is correct\n", GetCurrentThreadId());
 
         Sleep(0);
+    }
+
+    return 0;
+}
+
+void TestStaticDllTls() {
+    const int THREAD_CNT = 3;
+    HMODULE hDll = LoadLibrary(L"21.TLSDll.dll");
+    HANDLE hThs[THREAD_CNT];
+
+    for (int i = 0; i < THREAD_CNT; i++) {
+        hThs[i] = CreateThread(NULL, 0, DllTlsStaticThread, (void*)&THREAD_CNT, 0, NULL);
+    }
+
+    WaitForMultipleObjects(THREAD_CNT, hThs, TRUE, INFINITE);
+    FreeLibrary(hDll);
+}
+
+__declspec(thread) DWORD threadVal;
+
+DWORD WINAPI DllTlsStaticThread(LPVOID args) {
+    DWORD dwThreadCnt = *(DWORD*)args;
+    BOOL ret;
+
+    DWORD tid = GetCurrentThreadId();
+
+    for (int i = 0; i < 100; i++) {
+        threadVal++;
+        printf("[Thread %d] threadVal is : %d\n", tid, threadVal);
     }
 
     return 0;
