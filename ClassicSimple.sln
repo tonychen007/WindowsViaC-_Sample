@@ -72,6 +72,10 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "21.TLS", "21.TLS\21.TLS.vcx
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "21.TLSDll", "21.TLSDll\21.TLSDll.vcxproj", "{605C281E-26FC-4F12-8E4B-0190632513B0}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "21.DLLHook", "21.DLLHook\21.DLLHook.vcxproj", "{C19CF43C-9122-4A83-923D-991D138BF4D3}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "21.DllHookExe", "21.DllHookExe\21.DllHookExe.vcxproj", "{C436661B-0F26-467B-847A-CE4C799CD490}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -304,6 +308,22 @@ Global
 		{605C281E-26FC-4F12-8E4B-0190632513B0}.Release|x64.Build.0 = Release|x64
 		{605C281E-26FC-4F12-8E4B-0190632513B0}.Release|x86.ActiveCfg = Release|Win32
 		{605C281E-26FC-4F12-8E4B-0190632513B0}.Release|x86.Build.0 = Release|Win32
+		{C19CF43C-9122-4A83-923D-991D138BF4D3}.Debug|x64.ActiveCfg = Debug|x64
+		{C19CF43C-9122-4A83-923D-991D138BF4D3}.Debug|x64.Build.0 = Debug|x64
+		{C19CF43C-9122-4A83-923D-991D138BF4D3}.Debug|x86.ActiveCfg = Debug|Win32
+		{C19CF43C-9122-4A83-923D-991D138BF4D3}.Debug|x86.Build.0 = Debug|Win32
+		{C19CF43C-9122-4A83-923D-991D138BF4D3}.Release|x64.ActiveCfg = Release|x64
+		{C19CF43C-9122-4A83-923D-991D138BF4D3}.Release|x64.Build.0 = Release|x64
+		{C19CF43C-9122-4A83-923D-991D138BF4D3}.Release|x86.ActiveCfg = Release|Win32
+		{C19CF43C-9122-4A83-923D-991D138BF4D3}.Release|x86.Build.0 = Release|Win32
+		{C436661B-0F26-467B-847A-CE4C799CD490}.Debug|x64.ActiveCfg = Debug|x64
+		{C436661B-0F26-467B-847A-CE4C799CD490}.Debug|x64.Build.0 = Debug|x64
+		{C436661B-0F26-467B-847A-CE4C799CD490}.Debug|x86.ActiveCfg = Debug|Win32
+		{C436661B-0F26-467B-847A-CE4C799CD490}.Debug|x86.Build.0 = Debug|Win32
+		{C436661B-0F26-467B-847A-CE4C799CD490}.Release|x64.ActiveCfg = Release|x64
+		{C436661B-0F26-467B-847A-CE4C799CD490}.Release|x64.Build.0 = Release|x64
+		{C436661B-0F26-467B-847A-CE4C799CD490}.Release|x86.ActiveCfg = Release|Win32
+		{C436661B-0F26-467B-847A-CE4C799CD490}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
