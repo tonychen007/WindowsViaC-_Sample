@@ -1,7 +1,5 @@
 ﻿#include "dllhook.h"
 
-extern HINSTANCE g_hInstDll;
-
 BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
                        LPVOID lpReserved

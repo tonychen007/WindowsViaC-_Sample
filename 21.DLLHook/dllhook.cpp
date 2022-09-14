@@ -4,8 +4,7 @@
 #include "resource.h"
 
 HINSTANCE g_hInstDll = NULL;
-static const TCHAR g_szRegSubKey[] = L"Software\\TonyChen\\Desktop Item Position Saver";
-
+TCHAR g_szRegSubKey[] = L"Software\\TonyChen\\Desktop Item Position Saver";
 
 #pragma data_seg("Shared")
 HHOOK g_hHook = NULL;
@@ -20,9 +19,6 @@ DWORD g_dwThreadIdDIPS = 0;
 LRESULT WINAPI GetMsgProc(int nCode, WPARAM wParam, LPARAM lParam);
 INT_PTR WINAPI DlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 void DlgOnClose(HWND hWnd);
-
-void SaveListViewItemPositions(HWND hWndLV);
-void RestoreListViewItemPositions(HWND hWndLV);
 
 MYDLL BOOL WINAPI SetHook(DWORD threadID) {
 	BOOL ret = FALSE;
@@ -79,12 +75,34 @@ void DlgOnClose(HWND hWnd) {
     DestroyWindow(hWnd);
 }
 
+VOID SaveListViewItemPositions(HWND hWndLV) {
+    HKEY hKey;
+    LONG l;
+    int nMaxItems = ListView_GetItemCount(hWndLV);
 
-void SaveListViewItemPositions(HWND hWndLV) {
+    l = RegDeleteKey(HKEY_CURRENT_USER, g_szRegSubKey);
+    l = RegCreateKeyEx(HKEY_CURRENT_USER, g_szRegSubKey, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_SET_VALUE, NULL, &hKey, NULL);
+    if (l != ERROR_SUCCESS) {
+        return;
+    }
 
+    for (int i = 0; i < nMaxItems; i++) {
+        TCHAR szName[MAX_PATH];
+        POINT pt;
+
+        ListView_GetItemText(hWndLV, i, 0, szName, _countof(szName));
+        ListView_GetItemPosition(hWndLV, i, &pt);
+        if (GetLastError() == ERROR_INVALID_WINDOW_HANDLE) {
+            printf("Without dll inject, get item name failed\n");
+            break;
+        }
+        RegSetValueEx(hKey, szName, 0, REG_BINARY, (PBYTE)&pt, sizeof(pt));
+    }
+
+    RegCloseKey(hKey);
 }
 
-void RestoreListViewItemPositions(HWND hWndLV) {
+VOID RestoreListViewItemPositions(HWND hWndLV) {
 
 }
 
