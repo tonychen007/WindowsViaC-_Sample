@@ -73,7 +73,6 @@ LRESULT WINAPI GetKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 		TCHAR buf[256];
 		TCHAR buf2[8];
 		GetKeyboardState(ks);
-		//ToAscii(wParam, 0, ks, &w, 0);
 		ToUnicode(wParam, 0, ks, buf2, _countof(buf2), 0);
 		wsprintf(buf, L"The char is : %s\n", buf2);
 		WriteConsole(hConsole, buf, lstrlen(buf), 0, 0);
@@ -104,6 +103,39 @@ LRESULT WINAPI GetMsgProc2(int nCode, WPARAM wParam, LPARAM lParam) {
 		//Edit_GetText(msg->hwnd, buf, 256);
 		TCHAR ch = msg->wParam;
 		WriteConsole(hConsole, &ch, 1, 0, 0);
+	}
+
+	return CallNextHookEx(g_hHook, nCode, wParam, lParam);
+}
+
+MYDLL LRESULT WINAPI CallWndProc(int nCode, WPARAM wParam, LPARAM lParam) {
+	static BOOL bFirstTime = TRUE;
+	static HANDLE hConsole;
+	LPCWSTR pszConsoleHello = L"DLL MsgProc Conosle!\n";
+	TCHAR buf[256] = { 0 };
+
+	if (bFirstTime) {
+		bFirstTime = FALSE;
+
+		AllocConsole();
+		hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+		WriteConsole(hConsole, pszConsoleHello, lstrlen(pszConsoleHello), 0, 0);
+	}
+
+	CWPSTRUCT* cwp = (CWPSTRUCT*)lParam;
+
+	if (cwp->message == WM_COMMAND) {
+		int code = HIWORD(cwp->wParam);
+		int id = LOWORD(cwp->wParam);
+		HWND hEdit = (HWND)cwp->lParam;
+
+		if (code == EN_UPDATE) {
+			int a = 0;
+			Edit_GetText(hEdit, buf, 256);
+			lstrcat(buf, L"\n");
+			buf[lstrlen(buf)] = 0;
+			WriteConsole(hConsole, buf, lstrlen(buf), 0, 0);
+		}
 	}
 
 	return CallNextHookEx(g_hHook, nCode, wParam, lParam);
