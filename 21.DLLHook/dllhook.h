@@ -17,6 +17,7 @@ extern TCHAR g_szRegSubKey[];
 
 MYDLL LRESULT WINAPI GetMsgProc(int nCode, WPARAM wParam, LPARAM lParam);
 MYDLL LRESULT WINAPI GetKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
+MYDLL LRESULT WINAPI GetMsgProc2(int nCode, WPARAM wParam, LPARAM lParam);
 
 MYDLL BOOL WINAPI SetHook(DWORD threadID, int hookID, hookFn fn);
 MYDLL VOID SaveListViewItemPositions(HWND hWndLV);

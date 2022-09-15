@@ -82,6 +82,33 @@ LRESULT WINAPI GetKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 	return CallNextHookEx(g_hHook, nCode, wParam, lParam);
 }
 
+LRESULT WINAPI GetMsgProc2(int nCode, WPARAM wParam, LPARAM lParam) {
+	static BOOL bFirstTime = TRUE;
+	static HANDLE hConsole;
+	LPCWSTR pszConsoleHello = L"DLL MsgProc Conosle!\n";
+	TCHAR buf[256] = { 0 };
+	TCHAR buf2[256];
+
+	if (bFirstTime) {
+		bFirstTime = FALSE;
+
+		AllocConsole();
+		hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+		WriteConsole(hConsole, pszConsoleHello, lstrlen(pszConsoleHello), 0, 0);
+	}
+
+	// cannot receive editbox notification
+	MSG* msg = (MSG*)lParam;
+	if (msg->message == WM_CHAR) {
+		msg->hwnd;
+		//Edit_GetText(msg->hwnd, buf, 256);
+		TCHAR ch = msg->wParam;
+		WriteConsole(hConsole, &ch, 1, 0, 0);
+	}
+
+	return CallNextHookEx(g_hHook, nCode, wParam, lParam);
+}
+
 INT_PTR WINAPI DlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	switch (uMsg) {
 	case WM_CLOSE:

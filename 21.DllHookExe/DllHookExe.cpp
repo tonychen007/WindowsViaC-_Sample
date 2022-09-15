@@ -7,6 +7,7 @@ TCHAR g_szRegKey[] = L"Software\\TonyChen\\Desktop Item Position Saver";
 void TestGetDesktopListViewWithoutDLLInject();
 void TestGetDesktopListViewWithDLLInject();
 void TestKeyboardInject();
+void TestGetTextInject();
 
 
 int main() {
@@ -19,7 +20,11 @@ int main() {
 
 	printf("\n");
 	printf("TestKeyboardInject\n");
-	TestKeyboardInject();
+	//TestKeyboardInject();
+
+	printf("\n");
+	printf("TestGetTextInject\n");
+	TestGetTextInject();
 }
 
 void TestGetDesktopListViewWithoutDLLInject() {
@@ -99,6 +104,38 @@ void TestKeyboardInject() {
 	}
 
 	if (!SetHook(dwThreadId, WH_KEYBOARD, GetKeyboardProc)) {
+		printf("Set hook failed\n");
+		return;
+	}
+
+	printf("Press key to end...\n");
+	getchar();
+	TerminateProcess(pi.hProcess, 0);
+}
+
+void TestGetTextInject() {
+	STARTUPINFO si = { sizeof(si) };
+	PROCESS_INFORMATION pi;
+	HWND hWndNotepadEdit = NULL;
+
+	CreateProcess(L"C:\\Windows\\NOTEPAD.EXE", NULL, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi);
+
+	while (1) {
+		hWndNotepadEdit = FindWindow(TEXT("Notepad"), NULL);
+		if (hWndNotepadEdit != NULL)
+			break;
+		Sleep(100);
+	}
+
+	DWORD dwThreadId = GetWindowThreadProcessId(hWndNotepadEdit, NULL);
+
+	printf("Try to inject into notepad\n");
+	if (dwThreadId == 0) {
+		printf("Notepad is not running\n");
+		return;
+	}
+
+	if (!SetHook(dwThreadId, WH_GETMESSAGE, GetMsgProc2)) {
 		printf("Set hook failed\n");
 		return;
 	}
