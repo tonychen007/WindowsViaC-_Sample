@@ -103,7 +103,6 @@ void TestKeyboardInject() {
 		return;
 	}
 
-	PostThreadMessage(dwThreadId, WM_KEYDOWN, 0, 0);
 	printf("Press key to end...\n");
 	getchar();
 	TerminateProcess(pi.hProcess, 0);
