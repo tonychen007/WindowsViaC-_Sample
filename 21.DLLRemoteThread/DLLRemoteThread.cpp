@@ -46,7 +46,7 @@ void TestSimpleCreateRemoteThread() {
 
 	int cch = 1 + lstrlenW(szLib);
 	int cb = cch * sizeof(TCHAR);
-	
+
 	CreateProcess(L"C:\\Windows\\notepad.exe", 0, 0, 0, 0, 0, 0, 0, &si, &pi);
 	Sleep(1000);
 
