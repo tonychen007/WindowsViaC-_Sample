@@ -2,7 +2,7 @@
 #include <Windows.h>
 #include <tchar.h>
 
-#define DLL_NAME_19 L"19.DLLBasic.dll"
+#define DLL_NAME_21 L"21.DLLRemoteThreadDLL.dll"
 
 PTHREAD_START_ROUTINE pfnThreadRtn = (PTHREAD_START_ROUTINE)GetProcAddress(GetModuleHandle(TEXT("Kernel32")), "LoadLibraryW");
 
@@ -26,7 +26,7 @@ void TestSimpleCreateRemoteThreadFail() {
 	CreateProcess(L"C:\\Windows\\notepad.exe", 0, 0, 0, 0, 0, 0, 0, &si, &pi);
 	Sleep(1000);
 
-	HANDLE th = CreateRemoteThread(pi.hProcess, 0, 0, pfnThreadRtn, (void*)DLL_NAME_19, 0, 0);
+	HANDLE th = CreateRemoteThread(pi.hProcess, 0, 0, pfnThreadRtn, (void*)DLL_NAME_21, 0, 0);
 	WaitForSingleObject(pi.hProcess, INFINITE);
 	printf("thread and process have been terminated.\n");
 }
@@ -34,7 +34,7 @@ void TestSimpleCreateRemoteThreadFail() {
 void TestSimpleCreateRemoteThread() {
 	STARTUPINFO si = { sizeof(si) };
 	PROCESS_INFORMATION pi;
-	DWORD dwCode = 0;
+	DWORD dwProcessId = 0;
 	HANDLE hProcess = 0, hRemoteThread = 0;
 	TCHAR szLib[MAX_PATH];
 	LPWSTR pszFilename;
@@ -42,11 +42,11 @@ void TestSimpleCreateRemoteThread() {
 
 	GetModuleFileName(NULL, szLib, _countof(szLib));
 	pszFilename = wcsrchr(szLib, L'\\') + 1;
-	wcscpy_s(pszFilename, _countof(szLib) - (pszFilename - szLib), DLL_NAME_19);
+	wcscpy_s(pszFilename, _countof(szLib) - (pszFilename - szLib), DLL_NAME_21);
 
-	int cch = 1 + lstrlenW(pszFilename);
+	int cch = 1 + lstrlenW(szLib);
 	int cb = cch * sizeof(TCHAR);
-
+	
 	CreateProcess(L"C:\\Windows\\notepad.exe", 0, 0, 0, 0, 0, 0, 0, &si, &pi);
 	Sleep(1000);
 
@@ -64,7 +64,7 @@ void TestSimpleCreateRemoteThread() {
 		if (pszLibFileRemote == NULL) __leave;
 
 		// Copy the DLL's pathname to the remote process' address space
-		if (!WriteProcessMemory(hProcess, pszLibFileRemote, (PVOID)pszFilename, cb, NULL)) __leave;
+		if (!WriteProcessMemory(hProcess, pszLibFileRemote, (PVOID)szLib, cb, NULL)) __leave;
 
 		hRemoteThread = CreateRemoteThread(hProcess, NULL, 0, pfnThreadRtn, pszLibFileRemote, 0, NULL);
 		if (hRemoteThread == NULL) __leave;
@@ -84,4 +84,6 @@ void TestSimpleCreateRemoteThread() {
 		if (hProcess != NULL)
 			CloseHandle(hProcess);
 	}
+
+	TerminateProcess(pi.hProcess, 0);
 }

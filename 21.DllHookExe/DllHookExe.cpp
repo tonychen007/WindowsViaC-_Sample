@@ -117,6 +117,7 @@ void TestGetTextInject() {
 	STARTUPINFO si = { sizeof(si) };
 	PROCESS_INFORMATION pi;
 	HWND hWndNotepadEdit = NULL;
+	BOOL ret;
 
 	CreateProcess(L"C:\\Windows\\NOTEPAD.EXE", NULL, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi);
 
@@ -135,7 +136,10 @@ void TestGetTextInject() {
 		return;
 	}
 
-	if (!SetHook(dwThreadId, WH_GETMESSAGE, GetMsgProc2)) {
+	//ret = SetHook(dwThreadId, WH_GETMESSAGE, GetMsgProc2);
+	ret = SetHook(dwThreadId, WH_CALLWNDPROC, CallWndProc);
+
+	if (!ret) {
 		printf("Set hook failed\n");
 		return;
 	}
