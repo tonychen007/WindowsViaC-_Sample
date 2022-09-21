@@ -10,6 +10,7 @@ void TestVirtualAllocRoundup();
 void TestVirtualAllocReservedAndCommit();
 
 int main() {
+#ifdef X64
 	printf("TestMemoryRegion\n");
 	TestMemoryRegion();
 	printf("\n");
@@ -19,6 +20,7 @@ int main() {
 	printf("\n");
 	printf("TestVirtualAllocReservedAndCommit\n");
 	TestVirtualAllocReservedAndCommit();
+#endif
 
 	printf("\n");
 	printf("TestLargeAddrAware\n");
@@ -53,31 +55,110 @@ void TestMemoryRegion() {
 	printf("Alloc at kernel %p failed\n", (int*)addr);
 }
 
+BOOL LoggedSetLockPagesPrivilege(HANDLE hProcess, BOOL bEnable) {
+	struct {
+		DWORD Count;
+		LUID_AND_ATTRIBUTES Privilege[1];
+	} Info;
+
+	HANDLE Token;
+	BOOL Result;
+
+	// Open the token.
+	Result = OpenProcessToken(hProcess,
+		TOKEN_ADJUST_PRIVILEGES,
+		&Token);
+
+	if (Result != TRUE) {
+		return FALSE;
+	}
+
+	// Enable or disable?
+	Info.Count = 1;
+	Info.Privilege[0].Attributes = SE_PRIVILEGE_ENABLED;
+
+	// Get the LUID.
+	Result = LookupPrivilegeValue(NULL,
+		SE_LOCK_MEMORY_NAME,
+		&(Info.Privilege[0].Luid));
+
+	if (Result != TRUE) {
+		return FALSE;
+	}
+
+	Result = AdjustTokenPrivileges(Token, FALSE,
+		(PTOKEN_PRIVILEGES)&Info,
+		0, NULL, NULL);
+
+	if (Result != TRUE) {
+		return FALSE;
+	}
+	else {
+		if (GetLastError() != ERROR_SUCCESS) {
+			return FALSE;
+		}
+	}
+
+	CloseHandle(Token);
+
+	return TRUE;
+}
+
 void TestLargeAlloc() {
 	HANDLE hP = GetCurrentProcess();
 	SIZE_T size = 1024LL * 1024LL * 1024LL * 1.8;
 	LPVOID buf;
-	int flag = 1;
 	PROCESS_MEMORY_COUNTERS pmc = { 0 };
+	SYSTEM_INFO sSysInfo;
+	BOOL bResult;
 
-	printf("Try to alloc 1.5GB mem\n");
-	goto alloc;
+	LPVOID lpMemReserved = VirtualAlloc(NULL, size, MEM_RESERVE | MEM_PHYSICAL, PAGE_READWRITE);
 
-alloc:
+	GetSystemInfo(&sSysInfo);
+	ULONG_PTR NumberOfPages = size / sSysInfo.dwPageSize;
+	ULONG_PTR PFNArraySize = NumberOfPages * sizeof(ULONG_PTR);
+	ULONG_PTR* aPFNs1 = (ULONG_PTR*)HeapAlloc(GetProcessHeap(), 0, PFNArraySize);
+	ULONG_PTR* aPFNs2 = (ULONG_PTR*)HeapAlloc(GetProcessHeap(), 0, PFNArraySize);
+	ULONG_PTR* aPFNs3 = (ULONG_PTR*)HeapAlloc(GetProcessHeap(), 0, PFNArraySize);
+
+	if (!LoggedSetLockPagesPrivilege(GetCurrentProcess(), TRUE)) {
+		return;
+	}
+
+	AllocateUserPhysicalPages(GetCurrentProcess(), &NumberOfPages, aPFNs1);
+	AllocateUserPhysicalPages(GetCurrentProcess(), &NumberOfPages, aPFNs2);
+	AllocateUserPhysicalPages(GetCurrentProcess(), &NumberOfPages, aPFNs3);
+
 	GetProcessMemoryInfo(hP, &pmc, sizeof(pmc));
-	printf("Before alloc, the mem is %lld\n", pmc.PagefileUsage);
-	buf = VirtualAllocEx(hP, NULL, size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-	assert(buf != NULL);
-	GetProcessMemoryInfo(hP, &pmc, sizeof(pmc));
-	printf("After alloc, the mem is %lld\n", pmc.PagefileUsage);
-	VirtualFree(buf, 0, MEM_RELEASE);
+	printf("The commit mem is %lu\n", pmc.PagefileUsage);
 
-	if (flag == 2) return;
+	MapUserPhysicalPages(lpMemReserved, NumberOfPages, aPFNs1);
+	printf("Write to First block\n");
+	memcpy(lpMemReserved, "123\0", 4);
+	MapUserPhysicalPages(lpMemReserved, NumberOfPages, aPFNs2);
+	printf("Write to Second block\n");
+	memcpy(lpMemReserved, "456\0", 4);
+	MapUserPhysicalPages(lpMemReserved, NumberOfPages, aPFNs3);
+	printf("Write to Third block\n");
+	memcpy(lpMemReserved, "678\0", 4);
 
-	printf("Try to alloc 2.5GB mem\n");
-	size = 1024LL * 1024LL * 1024LL * 8;
-	flag = 2;
-goto alloc;
+	// go back to mapped mem for check
+	MapUserPhysicalPages(lpMemReserved, NumberOfPages, aPFNs1);
+	printf("First block %s\n", lpMemReserved);
+	MapUserPhysicalPages(lpMemReserved, NumberOfPages, aPFNs2);
+	printf("Second block %s\n", lpMemReserved);
+	MapUserPhysicalPages(lpMemReserved, NumberOfPages, aPFNs3);
+	printf("Third block %s\n", lpMemReserved);
+
+	MapUserPhysicalPages(lpMemReserved, NumberOfPages, NULL);
+	FreeUserPhysicalPages(GetCurrentProcess(), &NumberOfPages, aPFNs1);
+	FreeUserPhysicalPages(GetCurrentProcess(), &NumberOfPages, aPFNs2);
+	FreeUserPhysicalPages(GetCurrentProcess(), &NumberOfPages, aPFNs3);
+
+	VirtualFree(lpMemReserved, 0, MEM_RELEASE);
+	HeapFree(GetProcessHeap(), 0, aPFNs1);
+	HeapFree(GetProcessHeap(), 0, aPFNs2);
+	HeapFree(GetProcessHeap(), 0, aPFNs3);
 
 }
 
