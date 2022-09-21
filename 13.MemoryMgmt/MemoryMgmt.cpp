@@ -1,5 +1,6 @@
 ﻿#include <stdio.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <assert.h>
 #include <Windows.h>
 #include <Psapi.h>
@@ -130,7 +131,11 @@ void TestLargeAlloc() {
 	AllocateUserPhysicalPages(GetCurrentProcess(), &NumberOfPages, aPFNs3);
 
 	GetProcessMemoryInfo(hP, &pmc, sizeof(pmc));
+#ifndef X64
 	printf("The commit mem is %lu\n", pmc.PagefileUsage);
+#else
+	printf("The commit mem is %llu\n", pmc.PagefileUsage);
+#endif
 
 	MapUserPhysicalPages(lpMemReserved, NumberOfPages, aPFNs1);
 	printf("Write to First block\n");
@@ -159,7 +164,6 @@ void TestLargeAlloc() {
 	HeapFree(GetProcessHeap(), 0, aPFNs1);
 	HeapFree(GetProcessHeap(), 0, aPFNs2);
 	HeapFree(GetProcessHeap(), 0, aPFNs3);
-
 }
 
 void TestVirtualAllocRoundup() {
