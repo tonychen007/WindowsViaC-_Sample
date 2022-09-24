@@ -90,6 +90,10 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "13.MemoryMgmt", "13.MemoryM
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "14.VirtualMemory", "14.VirtualMemory\14.VirtualMemory.vcxproj", "{9B0E44B0-428E-4042-BA53-082BBC83A911}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "14.VMemMap", "14.VMemMap\14.VMemMap.vcxproj", "{379BBDF7-B0EA-46BC-A1C6-3D5B34BFAC9F}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "15.UsingVirtualMemory", "15.UsingVirtualMemory\15.UsingVirtualMemory.vcxproj", "{A9C28944-E85F-4569-AC8D-1EBFC2C5F545}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -394,6 +398,22 @@ Global
 		{9B0E44B0-428E-4042-BA53-082BBC83A911}.Release|x64.Build.0 = Release|x64
 		{9B0E44B0-428E-4042-BA53-082BBC83A911}.Release|x86.ActiveCfg = Release|Win32
 		{9B0E44B0-428E-4042-BA53-082BBC83A911}.Release|x86.Build.0 = Release|Win32
+		{379BBDF7-B0EA-46BC-A1C6-3D5B34BFAC9F}.Debug|x64.ActiveCfg = Debug|x64
+		{379BBDF7-B0EA-46BC-A1C6-3D5B34BFAC9F}.Debug|x64.Build.0 = Debug|x64
+		{379BBDF7-B0EA-46BC-A1C6-3D5B34BFAC9F}.Debug|x86.ActiveCfg = Debug|Win32
+		{379BBDF7-B0EA-46BC-A1C6-3D5B34BFAC9F}.Debug|x86.Build.0 = Debug|Win32
+		{379BBDF7-B0EA-46BC-A1C6-3D5B34BFAC9F}.Release|x64.ActiveCfg = Release|x64
+		{379BBDF7-B0EA-46BC-A1C6-3D5B34BFAC9F}.Release|x64.Build.0 = Release|x64
+		{379BBDF7-B0EA-46BC-A1C6-3D5B34BFAC9F}.Release|x86.ActiveCfg = Release|Win32
+		{379BBDF7-B0EA-46BC-A1C6-3D5B34BFAC9F}.Release|x86.Build.0 = Release|Win32
+		{A9C28944-E85F-4569-AC8D-1EBFC2C5F545}.Debug|x64.ActiveCfg = Debug|x64
+		{A9C28944-E85F-4569-AC8D-1EBFC2C5F545}.Debug|x64.Build.0 = Debug|x64
+		{A9C28944-E85F-4569-AC8D-1EBFC2C5F545}.Debug|x86.ActiveCfg = Debug|Win32
+		{A9C28944-E85F-4569-AC8D-1EBFC2C5F545}.Debug|x86.Build.0 = Debug|Win32
+		{A9C28944-E85F-4569-AC8D-1EBFC2C5F545}.Release|x64.ActiveCfg = Release|x64
+		{A9C28944-E85F-4569-AC8D-1EBFC2C5F545}.Release|x64.Build.0 = Release|x64
+		{A9C28944-E85F-4569-AC8D-1EBFC2C5F545}.Release|x86.ActiveCfg = Release|Win32
+		{A9C28944-E85F-4569-AC8D-1EBFC2C5F545}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
