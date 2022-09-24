@@ -152,32 +152,32 @@ void TestVMQuery() {
     tool32.CreateSnapshot(TH32CS_SNAPALL, pid);
     HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, pid);
 
-    printf("%s%25s%15s%8s%10s\n", "Address", "MEM State", "Region Size", "Blocks", "Module");
+    printf("%s%25s%18s%8s%10s\n", "Address", "MEM State", "Region Size(KB)", "Blocks", "Module");
     while (ret) {
         ret = VMQuery(hProcess, pvAddress, &vmem);
 
         printf("0x%016llX", pvAddress);
         wprintf(L"%12s", GetMemStorageText(vmem.dwRgnStorage));
-        printf("%17lld", vmem.RgnSize);
+        printf("%17lld", vmem.RgnSize / 1024);
         printf("%8lld", vmem.dwRgnBlocks);
 
         if ((vmem.dwRgnStorage != MEM_FREE) && (vmem.pvRgnBaseAddress != NULL)) {
             MODULEENTRY32 me = { sizeof(me) };
             if (tool32.ModuleFind(vmem.pvRgnBaseAddress, &me)) {
-                printf("%4s", "");
+                printf("%7s", "");
                 wprintf(L"%s", me.szExePath);
             }
             else {
                 DWORD len = GetMappedFileName(hProcess, vmem.pvRgnBaseAddress, pszFilename, MAX_PATH);
                 if (len != 0) {
-                    printf("%4s", "");
+                    printf("%7s", "");
                     wprintf(L"%s", pszFilename);
                 }
             }
         }
 
         if (vmem.bRgnIsAStack) {
-            printf("%4s", "");
+            printf("%7s", "");
             printf("Thread Stack");
         }
         printf("\n");
