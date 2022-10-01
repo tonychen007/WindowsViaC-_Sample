@@ -1,5 +1,6 @@
 ﻿
 #include <stdio.h>
+#include <algorithm>
 #include <Windows.h>
 
 #pragma data_seg("tony_shared")
@@ -15,8 +16,9 @@ _declspec(allocate("tony_shared")) int a1 = 0;
 
 void TestInstNum();
 void TestReverseByte(const char* filename);
-void ReverseChar(char* buf, int len);
+void ReverseChar(char* buf, int64_t len);
 void TestMemMapped();
+void TestFileMappedReverseByte(LPCWSTR filename);
 
 int main(int argc, char** argv) {
     printf("TestInstNum\n");
@@ -39,6 +41,13 @@ int main(int argc, char** argv) {
     printf("\n");
     printf("TestMemMapped\n");
     TestMemMapped();
+
+    printf("\n");
+    printf("TestFileMappedReverseByte\n");
+    DWORD st = GetTickCount();
+    TestFileMappedReverseByte(L"./test.pdb");
+    DWORD ed = GetTickCount();
+    printf("Total time is : %g\n", (ed - st) / 1000.0f);
 }
 
 void TestInstNum() {
@@ -157,8 +166,8 @@ void TestReverseByte(const char* filename) {
     free(endBuf);
 }
 
-void ReverseChar(char* buf, int len) {
-    int i = 0, j = len - 1;
+void ReverseChar(char* buf, int64_t len) {
+    int64_t i = 0, j = len - 1;
 
     while (i < j) {
         char c = buf[i];
@@ -206,4 +215,31 @@ void TestMemMapped() {
 
     CloseHandle(hFileMapped);
     CloseHandle(hFile);
+}
+
+void TestFileMappedReverseByte(LPCWSTR filename) {
+    LARGE_INTEGER memSize, fileSize;
+    DWORD highSize;
+    DWORD granuality = 65536;
+    HANDLE hFile;
+    HANDLE hFileMapped;
+    LPVOID buf;
+    MEMORYSTATUS mst;
+
+    hFile = CreateFile(filename, GENERIC_READ | GENERIC_WRITE,
+        FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+    hFileMapped = CreateFileMapping(hFile, NULL, PAGE_READWRITE, 0, 0, NULL);
+
+    int lowSize = GetFileSize(hFile, &highSize);
+    fileSize.LowPart = lowSize;
+    fileSize.HighPart = highSize;
+
+    GlobalMemoryStatus(&mst);
+    if (fileSize.QuadPart > mst.dwAvailPhys - 512 * 1024*1024) {
+        printf("Not enough ram to map the file\n");
+    }
+
+    buf = MapViewOfFile(hFileMapped, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0);
+    ReverseChar((char*)buf, fileSize.QuadPart);
+    UnmapViewOfFile(buf);
 }
