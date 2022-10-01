@@ -16,6 +16,7 @@ _declspec(allocate("tony_shared")) int a1 = 0;
 void TestInstNum();
 void TestReverseByte(const char* filename);
 void ReverseChar(char* buf, int len);
+void TestMemMapped();
 
 int main(int argc, char** argv) {
     printf("TestInstNum\n");
@@ -25,13 +26,19 @@ int main(int argc, char** argv) {
     printf("TestReverseByte\n");
     TestReverseByte("./1.cpp");
 
-    if (argc == 2) {
-        printf("Test large file\n");
-        DWORD st = GetTickCount();
-        TestReverseByte(argv[1]);
-        DWORD ed = GetTickCount();
-        printf("Total time is : %g\n", (ed - st) / 1000.0f);
+    if (0) {
+        if (argc == 2) {
+            printf("Test large file\n");
+            DWORD st = GetTickCount();
+            TestReverseByte(argv[1]);
+            DWORD ed = GetTickCount();
+            printf("Total time is : %g\n", (ed - st) / 1000.0f);
+        }
     }
+
+    printf("\n");
+    printf("TestMemMapped\n");
+    TestMemMapped();
 }
 
 void TestInstNum() {
@@ -160,4 +167,43 @@ void ReverseChar(char* buf, int len) {
         i++;
         j--;
     }
+}
+
+void TestMemMapped() {
+    HANDLE hFile;
+    HANDLE hFileMapped;
+    LPVOID buf = 0;
+    LPCWSTR pszFile = L"./MemoryMapped.cpp";
+    //LPCWSTR pszFile = L"D:\\VMWARE\\WIN7\\WIN7.vmdk";
+    DWORD chunkSize = 1024 * 1024 * 1024;
+    LARGE_INTEGER li;
+    LARGE_INTEGER fileSize;
+    DWORD highSize;
+    DWORD granuality = 65536;
+
+    hFile = CreateFile(pszFile, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+    hFileMapped = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
+
+    li.QuadPart = 0;
+    int lowSize = GetFileSize(hFile, &highSize);
+    fileSize.LowPart = lowSize;
+    fileSize.HighPart = highSize;
+
+    while (li.QuadPart < fileSize.QuadPart) {
+        int rem = (fileSize.QuadPart - li.QuadPart) % chunkSize;
+        int size = (rem == 0) ? chunkSize : rem;
+
+        buf = MapViewOfFile(hFileMapped, FILE_MAP_READ, li.HighPart, li.LowPart, size);
+        if (buf == NULL) {
+            break;
+        }
+        UnmapViewOfFile(buf);
+        li.QuadPart += size;
+    }
+
+    if (buf)
+        UnmapViewOfFile(buf);
+
+    CloseHandle(hFileMapped);
+    CloseHandle(hFile);
 }
