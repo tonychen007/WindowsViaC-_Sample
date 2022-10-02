@@ -19,6 +19,8 @@ void TestReverseByte(const char* filename);
 void ReverseChar(char* buf, int64_t len);
 void TestMemMapped();
 void TestFileMappedReverseByte(LPCWSTR filename);
+void TestSharingFile();
+void TestReserveMemMapped();
 
 int main(int argc, char** argv) {
     printf("TestInstNum\n");
@@ -42,12 +44,22 @@ int main(int argc, char** argv) {
     printf("TestMemMapped\n");
     TestMemMapped();
 
+    if (0) {
+        printf("\n");
+        printf("TestFileMappedReverseByte\n");
+        DWORD st = GetTickCount();
+        TestFileMappedReverseByte(L"./test.pdb");
+        DWORD ed = GetTickCount();
+        printf("Total time is : %g\n", (ed - st) / 1000.0f);
+    }
+
     printf("\n");
-    printf("TestFileMappedReverseByte\n");
-    DWORD st = GetTickCount();
-    TestFileMappedReverseByte(L"./test.pdb");
-    DWORD ed = GetTickCount();
-    printf("Total time is : %g\n", (ed - st) / 1000.0f);
+    printf("TestSharingFile\n");
+    //TestSharingFile();
+
+    printf("\n");
+    printf("TestSparseMemMapped\n");
+    TestReserveMemMapped();
 }
 
 void TestInstNum() {
@@ -242,4 +254,67 @@ void TestFileMappedReverseByte(LPCWSTR filename) {
     buf = MapViewOfFile(hFileMapped, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0);
     ReverseChar((char*)buf, fileSize.QuadPart);
     UnmapViewOfFile(buf);
+}
+
+void TestSharingFile() {
+    // sharing pageFile
+    HANDLE hMapView;
+    LPVOID buf;
+    const char* str = "Hi Tony, there?";
+
+    // try to open file
+    hMapView = OpenFileMapping(FILE_MAP_READ | FILE_MAP_WRITE, FALSE, TEXT("TonyShare"));
+    if (hMapView == NULL) {
+        hMapView = CreateFileMapping(INVALID_HANDLE_VALUE, 0, PAGE_READWRITE, 0, 4096, L"TonyShare");
+        buf = MapViewOfFile(hMapView, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0);
+        memcpy(buf, str, strlen(str));
+    }
+    else {
+        buf = MapViewOfFile(hMapView, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0);
+        printf("The buf is : %s\n", buf);
+    }
+
+    printf("Press key to end\n");
+    getchar();
+    CloseHandle(hMapView);
+}
+
+void TestReserveMemMapped() {
+    HANDLE hMapView = NULL;
+    char* buf = 0;
+    LARGE_INTEGER li;
+    size_t size = 1024 * 1024 * 512;
+    DWORD flags = PAGE_READWRITE;
+
+    __try {
+        hMapView = CreateFileMapping(INVALID_HANDLE_VALUE, 0, PAGE_READWRITE | SEC_RESERVE, 0, 4096, NULL);
+        buf = (char*)MapViewOfFile(hMapView, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0);
+        buf[0] = 1;
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER) {
+        printf("CreateFileMapping with SEC_RESERVE will raise access violation\n");
+        UnmapViewOfFile(buf);
+        CloseHandle(hMapView);
+    }
+
+    // On my machine, the ram is 32G
+    // Without SEC_RESERVE, memset will hang. With it, it fileMapping is backed the pageFile
+    li.QuadPart = 1024 * 1024 * 1024 * 32LL;
+    flags |= SEC_RESERVE;
+    hMapView = CreateFileMapping(INVALID_HANDLE_VALUE, 0, flags, li.HighPart, li.LowPart, NULL);
+    buf = (char*)MapViewOfFile(hMapView, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0);
+
+    VirtualAlloc(buf, size, MEM_COMMIT, PAGE_READWRITE);
+    memset(buf, 1, size);
+
+    __try {
+        buf[size] = 1;
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER) {
+        ::VirtualAlloc(buf + size, size, MEM_COMMIT, PAGE_READWRITE);
+    }
+    memset(buf+size, 1, size);
+
+    UnmapViewOfFile(buf);
+    CloseHandle(hMapView);
 }
