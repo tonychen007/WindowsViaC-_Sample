@@ -21,6 +21,7 @@ void TestMemMapped();
 void TestFileMappedReverseByte(LPCWSTR filename);
 void TestSharingFile();
 void TestReserveMemMapped();
+void TestSparseMemMapped();
 
 int main(int argc, char** argv) {
     printf("TestInstNum\n");
@@ -59,7 +60,11 @@ int main(int argc, char** argv) {
 
     printf("\n");
     printf("TestSparseMemMapped\n");
-    TestReserveMemMapped();
+    //TestReserveMemMapped();
+
+    printf("\n");
+    printf("TestSparseMemMapped\n");
+    TestSparseMemMapped();
 }
 
 void TestInstNum() {
@@ -317,4 +322,89 @@ void TestReserveMemMapped() {
 
     UnmapViewOfFile(buf);
     CloseHandle(hMapView);
+}
+
+void TestSparseMemMapped() {
+    BOOL ret;
+    HANDLE hf, hMap;
+    BY_HANDLE_FILE_INFORMATION fileInfo;
+    FILE_ZERO_DATA_INFORMATION fzdi;
+    FILE_ALLOCATED_RANGE_BUFFER queryrange;         // Range to be examined
+    FILE_ALLOCATED_RANGE_BUFFER ranges[1024];       // Allocated areas info
+    LARGE_INTEGER li;
+    DWORD dw;
+    CHAR* buf;
+    const char* str = "Hi, Tony";
+    int chunk = 65536;
+
+    li.QuadPart = 1024 * 1024 * 1024 * 1024LL * 10LL;
+    hf = CreateFile(L".\\MMFSparse", GENERIC_WRITE | GENERIC_READ, 0, NULL, CREATE_ALWAYS, 0, NULL);
+    ret = DeviceIoControl(hf, FSCTL_SET_SPARSE, 0, 0, 0, 0, &dw, 0);
+    hMap = CreateFileMapping(hf, NULL, PAGE_READWRITE, li.HighPart, li.LowPart, NULL);
+    buf = (CHAR*)MapViewOfFile(hMap, FILE_MAP_WRITE | FILE_MAP_READ, 0, 0, 0);
+
+    // file size is multiple of 64K
+    buf[0] = 1;
+    buf[128] = 2;
+    buf[chunk] = 3;
+    strcpy_s(&buf[chunk*3 + 512], strlen(str) + 1, "Hi, Tony");
+    //buf[chunk * 3 + 512] = 4;
+
+    // query the file range
+    LARGE_INTEGER iFileSize;
+    iFileSize.LowPart = ::GetFileSize(hf, (LPDWORD)&iFileSize.HighPart);
+    queryrange.FileOffset.QuadPart = 0;
+    queryrange.Length = iFileSize;
+
+    do {
+        ret = DeviceIoControl(hf, FSCTL_QUERY_ALLOCATED_RANGES,
+            &queryrange, sizeof(queryrange), ranges, sizeof(ranges), &dw, NULL);
+
+        if (ret) {
+            int entries = dw / sizeof(FILE_ALLOCATED_RANGE_BUFFER);
+            queryrange.FileOffset.QuadPart = ranges[entries - 1].FileOffset.QuadPart + ranges[entries - 1].Length.QuadPart;
+            queryrange.Length.QuadPart = iFileSize.QuadPart - queryrange.FileOffset.QuadPart;
+        }
+    } while (!ret);
+
+    // zero last entries
+    printf("zero last entries\n");
+    fzdi.FileOffset.QuadPart = queryrange.FileOffset.QuadPart + chunk;
+    fzdi.BeyondFinalZero.QuadPart = iFileSize.QuadPart;
+    ret = DeviceIoControl(hf, FSCTL_SET_ZERO_DATA, (PVOID)&fzdi, sizeof(fzdi), NULL, 0, &dw, NULL);
+
+    UnmapViewOfFile(buf);
+    CloseHandle(hf);
+    CloseHandle(hMap);
+
+    // SetFilePointerEx does not work on Mem Mapping
+    printf("Before truncate, the file size is : %lld\n", iFileSize.QuadPart);
+    hf = CreateFile(L".\\MMFSparse", GENERIC_WRITE | GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
+    iFileSize.QuadPart = queryrange.FileOffset.QuadPart + chunk;
+    dw = SetFilePointerEx(hf, iFileSize, NULL, FILE_BEGIN);
+    ret = SetEndOfFile(hf);
+
+    dw = GetCompressedFileSize(L".\\MMFSparse", &dw);
+    printf("After truncate, the sparse file size is : %lld\n", dw);
+    dw = GetFileSize(hf, 0);
+    printf("Actual file size is : %lld\n", dw);
+    CloseHandle(hf);
+
+    // Verify content
+    hf = CreateFile(L".\\MMFSparse", GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
+    hMap = CreateFileMapping(hf, NULL, PAGE_READONLY, 0, 0, 0);
+    buf = (CHAR*)MapViewOfFile(hMap, FILE_MAP_READ, 0, 0, 0);
+
+    printf("buf[0]: %d\n",buf[0]);
+    printf("buf[128]: %d\n", buf[128]);
+    printf("buf[chunk]: %d\n", buf[chunk]);
+    printf("buf[chunk*3+512]: ");
+    char* p = buf + chunk * 3 + 512;
+    fputs(p, stdout);
+    printf("\n");
+
+    UnmapViewOfFile(buf);
+    CloseHandle(hf);
+    CloseHandle(hMap);
+    DeleteFile(L".\\MMFSparse");
 }
