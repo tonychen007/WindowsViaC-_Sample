@@ -131,7 +131,7 @@ void TestMemReset(int accessLater) {
         printf("ZeroMemory forced the page to be written to the paging file\n");
     }
     else {
-        printf("ZeroMemory did forced the page to be written to the paging file\n");
+        printf("ZeroMemory did not forced the page to be written to the paging file\n");
     }
 
     printf("The data is : %s\n", data);
