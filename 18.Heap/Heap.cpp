@@ -53,7 +53,7 @@ int main() {
 	HANDLE hHeap = GetProcessHeap();
     SYSTEM_INFO sysInfo;
 	ULONG HeapInformationValue = 2;
-	BYTE* buf;
+	LPVOID buf;
 	BOOL ret;
 	DWORD size;
 
@@ -63,19 +63,19 @@ int main() {
 	ret = HeapSetInformation(hHeap, HeapCompatibilityInformation, &HeapInformationValue, sizeof(HeapInformationValue));
     */
 
-	hHeap = HeapCreate(HEAP_GENERATE_EXCEPTIONS, 1, 1);
+	hHeap = HeapCreate(HEAP_NO_SERIALIZE, 1, 1);
     HeapWalk(hHeap);
     printf("----------------------------------\n");
 
-	buf = (BYTE*)HeapAlloc(hHeap, HEAP_GENERATE_EXCEPTIONS, 3000);
+	buf = HeapAlloc(hHeap, 0, 3000);
     HeapWalk(hHeap);
     printf("----------------------------------\n");
 
-	buf = (BYTE*)HeapAlloc(hHeap, HEAP_GENERATE_EXCEPTIONS, 3224);
+	buf = HeapAlloc(hHeap, 0, 3224);
     HeapWalk(hHeap);
     printf("----------------------------------\n");
 
-    buf = (BYTE*)HeapAlloc(hHeap, HEAP_GENERATE_EXCEPTIONS, 24);
+    buf = HeapAlloc(hHeap, 0, 24);
     HeapWalk(hHeap);
     printf("----------------------------------\n");
 
