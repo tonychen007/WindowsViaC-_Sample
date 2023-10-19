@@ -1,0 +1,5 @@
+LIBRARY 02.UnicodeStringDLL.dll
+EXPORTS
+StringReverseW @1
+StringReverseA @2
+
